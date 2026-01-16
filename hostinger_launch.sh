@@ -1,6 +1,14 @@
 #!/bin/bash
 
-# 1. Create the Docker Compose file automatically
+# 1. Automatically create .env from env.h if it exists
+if [ -f "env.h" ]; then
+    echo "Creating .env from env.h..."
+    cp env.h .env
+else
+    echo "Warning: env.h not found. Using existing .env if present."
+fi
+
+# 2. Create the Docker Compose file automatically
 cat <<EOF > docker-compose.yml
 version: '3.8'
 services:
@@ -42,7 +50,7 @@ volumes:
   elinity_p1_data:
 EOF
 
-# 2. Build and Launch
+# 3. Build and Launch
 sudo docker-compose up -d --build
 
 echo "------------------------------------------------"
