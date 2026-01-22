@@ -29,19 +29,28 @@ REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
 
 # PostgreSQL Database connection
-DATABASE_URL = (
-    f"postgresql://{os.getenv('DB_USER','') }:{os.getenv('DB_PASSWORD','')}"
-    f"@{os.getenv('DB_HOST','localhost')}:{os.getenv('DB_PORT','5432')}/{os.getenv('DB_NAME','') }"
-)
+# PostgreSQL Database connection
+# Priority: Check DB_URL first (used by our Supabase config), then DATABASE_URL, then construct from parts
+_env_db_url = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
 
-# Ensure SSL for managed Postgres hosts (Render, AWS RDS, etc.). If a local DB is used,
-# leaving sslmode off is fine. We prefer setting sslmode=require when the host is not
-# localhost to avoid "SSL connection has been closed unexpectedly" errors during startup.
-db_host = os.getenv('DB_HOST', '')
-if db_host and not db_host.startswith(('localhost', '127.', '::1', 'postgres', 'db', 'host.docker.internal')):
+if _env_db_url:
+    DATABASE_URL = _env_db_url
+else:
+    DATABASE_URL = (
+        f"postgresql://{os.getenv('DB_USER','') }:{os.getenv('DB_PASSWORD','')}"
+        f"@{os.getenv('DB_HOST','localhost')}:{os.getenv('DB_PORT','5432')}/{os.getenv('DB_NAME','') }"
+    )
+
+# Ensure SSL for managed Postgres hosts (Supabase, Render, AWS RDS, etc.).
+# We apply this if SSL is mandated by env or if host looks external.
+ssl_mode_env = os.getenv("DB_SSL_MODE", "disable")
+
+if ssl_mode_env == "require" or (
+    "localhost" not in DATABASE_URL and 
+    "127.0.0.1" not in DATABASE_URL and 
+    "db:" not in DATABASE_URL and 
+    "postgres:" not in DATABASE_URL
+):
     if 'sslmode' not in DATABASE_URL:
-        # Append sslmode=require if not already present
-        if '?' in DATABASE_URL:
-            DATABASE_URL = DATABASE_URL + '&sslmode=require'
-        else:
-            DATABASE_URL = DATABASE_URL + '?sslmode=require'
+        connector = '&' if '?' in DATABASE_URL else '?'
+        DATABASE_URL = f"{DATABASE_URL}{connector}sslmode=require"
