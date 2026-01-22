@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { sendAction } from '../../api/client';
 import { PremiumButton, PremiumText } from '../../components/shared/PremiumComponents';
-import { Sword, Shield, Scroll, Send, Flame, Sparkles, BookOpen } from 'lucide-react';
+import { Sword, Scroll, Send, Flame, Sparkles, BookOpen, Crown, Zap, Ghost } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PremiumGameLayout } from '../PremiumGameLayout';
 
@@ -11,17 +11,19 @@ export const MythMakerView = () => {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
 
-    if (!gameState) return <div className="text-white text-center mt-20">Initializing Mythos...</div>;
+    if (!gameState) return <div className="text-white text-center mt-20 font-black tracking-[0.5em] animate-pulse">AWAKENING DIVINITY...</div>;
 
-    const mythNarrative = gameState.last_ai_response?.narrative || "The Hero's Journey begins... Awaiting the Oracle's voice.";
+    const mythNarrative = gameState.last_ai_response?.narrative || "The silence of the void awaits your first declaration.";
     const mythPanel = gameState.last_ai_response?.myth_panel || {};
-    const stage = gameState.stage || 'Origin';
+    const stage = gameState.stage || 'Origins';
     const turn = gameState.turn || 1;
 
-    // Safety check for panel in case it is just a string (fallback)
-    const panelTitle = typeof mythPanel === 'object' ? mythPanel.title : "Mythic Vision";
-    const panelPoem = typeof mythPanel === 'object' ? mythPanel.poem : (typeof mythPanel === 'string' ? mythPanel : "");
-    const panelVisual = typeof mythPanel === 'object' ? mythPanel.visual_description : "";
+    // New Stats
+    const belief = gameState.belief ?? 10;
+    const divinity = gameState.divinity ?? 0;
+
+    const panelTitle = mythPanel.title || "The Unwritten Word";
+    const panelPoem = mythPanel.poem || "No verse has yet been sung of you.";
 
     const handleAction = async () => {
         if (!input.trim() || !sessionId) return;
@@ -32,9 +34,7 @@ export const MythMakerView = () => {
                 updateGameState(resp.state);
                 setInput("");
             }
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
         setLoading(false);
     };
 
@@ -42,124 +42,107 @@ export const MythMakerView = () => {
         <PremiumGameLayout
             title="Myth Maker Arena"
             subtitle={`Epoch: ${stage}`}
-            icon={Sword}
-            backgroundVar="nebula"
-            guideText="1. Shape your legend through mythic actions.\n2. In each epoch, describe how your hero reacts to the Oracle's prophecy.\n3. The chronicler weaves your words into an immortal saga.\n4. Complete the hero's journey with other participants."
+            icon={Crown}
+            backgroundVar="starfield"
+            guideText="1. Shape your legend through divine deeds.\n2. Belief flows from the world; Divinity flows from within.\n3. The Chronicler weaves your saga into the stars.\n4. Confront the trials of your own nature."
         >
-            <div className="flex flex-col h-full gap-6 relative min-h-[70vh]">
+            <div className="flex flex-col h-full gap-8 relative p-4 md:p-8 overflow-hidden">
 
-                {/* Heroic Header / Status Bar */}
-                <div className="flex items-center justify-between bg-white/5 px-6 py-3 rounded-2xl border border-white/10 backdrop-blur-md shadow-lg">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-gold/20 text-gold border border-gold/30 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
-                            <Flame size={18} className="animate-pulse" />
+                {/* Divine Status Header */}
+                <div className="grid grid-cols-2 gap-8 bg-black/40 backdrop-blur-2xl p-6 rounded-[2rem] border border-white/10 shadow-3xl relative z-10">
+                    <div className="space-y-3">
+                        <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.3em] text-amber-500">
+                            <div className="flex items-center gap-2"><Flame size={12} /> World Belief</div>
+                            <span>{belief}%</span>
                         </div>
-                        <span className="text-sm font-premium font-bold text-white tracking-widest uppercase">Hero's Spirit</span>
+                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div animate={{ width: `${belief}%` }} className="h-full bg-amber-500 shadow-[0_0_15px_#f59e0b]" />
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden">
-                            <motion.div
-                                initial={{ width: "10%" }}
-                                animate={{ width: `${Math.min(100, turn * 10)}%` }}
-                                className="h-full bg-gradient-to-r from-gold to-orange-500"
-                            />
+                    <div className="space-y-3">
+                        <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.3em] text-white">
+                            <div className="flex items-center gap-2"><Zap size={12} /> Personal Divinity</div>
+                            <span>{divinity}%</span>
                         </div>
-                        <span className="text-xs text-gold font-mono tracking-tighter">Turn {turn}</span>
+                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div animate={{ width: `${divinity}%` }} className="h-full bg-gradient-to-r from-amber-200 to-white shadow-[0_0_15px_white]" />
+                        </div>
+                    </div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/10 px-4 py-1 rounded-full border border-white/5 text-[8px] font-black tracking-widest text-white/40">
+                        TURN {turn}
                     </div>
                 </div>
 
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Narrative - The Chronicler's Voice */}
-                    <div className="lg:col-span-2 flex flex-col gap-6">
-                        <div className="flex-1 bg-black/40 rounded-3xl relative overflow-hidden group border border-white/10 shadow-2xl transition-all duration-500 hover:border-gold/20 flex flex-col">
-                            {/* Background Atmosphere */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-transparent to-red-900/10 pointer-events-none" />
-                            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-1000">
-                                <Shield size={300} />
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-0">
+                    {/* The Chronicler's Voice - Main Scene */}
+                    <div className="lg:col-span-2 flex flex-col h-full">
+                        <div className="flex-1 bg-gradient-to-b from-black/60 to-black/20 rounded-[3rem] border border-white/5 relative overflow-hidden flex flex-col justify-center px-12 text-center group">
+                            <div className="absolute top-0 right-0 p-20 text-white/[0.02] -rotate-12 pointer-events-none group-hover:text-amber-500/[0.05] transition-colors duration-1000">
+                                <Sword size={400} />
                             </div>
 
-                            <div className="relative z-10 flex-1 flex flex-col p-10 md:p-14">
-                                <div className="flex items-center gap-2 mb-8 text-gold/40 text-[10px] uppercase tracking-[0.4em] font-bold">
-                                    <Sparkles size={12} />
-                                    <span>The Oracle's Proclamation</span>
-                                </div>
-
-                                <div className="flex-1 flex flex-col justify-center">
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={mythNarrative}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.98 }}
-                                            transition={{ duration: 0.8, ease: "easeOut" }}
-                                            className="text-2xl md:text-3xl lg:text-4xl font-premium font-bold text-white leading-[1.3] text-shadow-xl"
-                                        >
-                                            <PremiumText text={mythNarrative} />
-                                        </motion.div>
-                                    </AnimatePresence>
-                                </div>
-                            </div>
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={mythNarrative.substring(0, 30)}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 1.05 }}
+                                    className="relative z-10"
+                                >
+                                    <div className="text-[10px] font-black text-amber-500/40 mb-8 uppercase tracking-[0.5em]">The Eternal Saga</div>
+                                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-serif italic text-white leading-tight drop-shadow-2xl">
+                                        <PremiumText text={mythNarrative} />
+                                    </h2>
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
                     </div>
 
-                    {/* Right Column: Prophecy & Visions */}
-                    <div className="lg:col-span-1 flex flex-col gap-6">
-                        {/* Prophecy Card */}
-                        <div className="bg-gradient-to-br from-gold/10 to-transparent p-[1px] rounded-3xl shadow-xl">
-                            <div className="bg-[#120f1a] rounded-[1.7rem] p-6 h-full border border-white/5 backdrop-blur-sm">
-                                <div className="flex items-center gap-2 mb-4 text-gold border-b border-gold/10 pb-3">
-                                    <BookOpen size={16} />
-                                    <span className="text-xs font-bold uppercase tracking-widest">{panelTitle || "Unknown Prophecy"}</span>
-                                </div>
-                                <p className="text-gray-300 italic font-serif leading-relaxed text-lg whitespace-pre-wrap">
-                                    {panelPoem || "The ink of destiny is still wet, awaiting the hero's next stride."}
-                                </p>
+                    {/* The Prophet's Scroll */}
+                    <div className="lg:col-span-1 flex flex-col gap-8 h-full">
+                        <div className="bg-[#1a1625] rounded-[2.5rem] border border-amber-500/10 p-10 flex-1 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden border-t-amber-500/30">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+                            <BookOpen className="text-amber-500/20 mb-6" size={32} />
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500/60 mb-8">{panelTitle}</h4>
+                            <p className="text-xl italic font-serif text-gray-300 leading-relaxed whitespace-pre-wrap px-4">
+                                "{panelPoem}"
+                            </p>
+                            <div className="absolute bottom-6 flex gap-2">
+                                <Sparkles size={12} className="text-amber-500 animate-pulse" />
+                                <Sparkles size={12} className="text-amber-500 animate-pulse delay-500" />
                             </div>
                         </div>
 
-                        {/* Vision Card */}
-                        <div className="bg-white/5 rounded-3xl p-6 flex-1 border border-white/10 relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                            <div className="relative z-10 h-full flex flex-col">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                        Vision Cue
-                                    </div>
-                                </div>
-                                <div className="flex-1 flex flex-col justify-end">
-                                    <p className="text-sm text-gray-400 font-medium group-hover:text-white transition-colors duration-500 line-clamp-4">
-                                        {panelVisual || "A hazy mist obscures the paths ahead, where shadows dance with starlight."}
-                                    </p>
-                                </div>
+                        {/* Quick Status Info */}
+                        <div className="bg-white/5 rounded-3xl p-6 flex flex-col gap-4 border border-white/5 backdrop-blur-3xl">
+                            <div className="flex items-center gap-4 text-white/40">
+                                <Ghost size={16} />
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Current Resonance: High</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Bard Input - Immortal Command */}
-                <div className="relative mt-2">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-gold/20 via-orange-500/20 to-gold/20 rounded-3xl blur opacity-30 group-focus-within:opacity-100 transition duration-1000" />
-                    <div className="relative bg-[#0d0b14] rounded-2xl border border-white/10 p-2 flex items-center gap-3 shadow-2xl focus-within:border-gold/50 transition-all">
-                        <div className="pl-4 text-gold/40">
-                            <Scroll size={28} />
+                {/* The Divine Command Input */}
+                <div className="relative z-20 mx-auto w-full max-w-4xl">
+                    <div className="bg-white/5 backdrop-blur-[40px] border border-white/10 p-3 rounded-[3rem] flex items-center gap-4 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)] focus-within:border-amber-500/30 transition-all">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-amber-950/20">
+                            <Scroll size={24} />
                         </div>
                         <input
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleAction()}
-                            placeholder="Forge your next legend together..."
-                            className="flex-1 bg-transparent border-none text-white placeholder:text-gray-600 py-5 px-3 focus:outline-none font-serif text-xl tracking-wide"
+                            placeholder="Forge your immortal command..."
+                            className="flex-1 bg-transparent border-none text-white placeholder:text-white/10 py-5 px-3 focus:outline-none font-serif text-2xl"
                             disabled={loading}
                         />
                         <PremiumButton
                             onClick={handleAction}
                             disabled={!input || loading}
-                            className="px-8 py-4 rounded-xl text-lg group overflow-hidden relative"
+                            className="h-14 px-12 rounded-full !bg-white !text-black hover:scale-105 transition-transform font-black text-[10px] tracking-widest shadow-2xl"
                         >
-                            <span className="relative z-10 flex items-center gap-2">
-                                {loading ? <Flame size={20} className="animate-spin" /> : <>Command <Send size={20} /></>}
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            {loading ? <Flame className="animate-spin" size={16} /> : 'MANIFEST'}
                         </PremiumButton>
                     </div>
                 </div>
@@ -167,3 +150,4 @@ export const MythMakerView = () => {
         </PremiumGameLayout>
     );
 };
+

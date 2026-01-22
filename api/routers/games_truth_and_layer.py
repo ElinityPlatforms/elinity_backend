@@ -29,7 +29,7 @@ class ActionReq(BaseModel):
 
 @router.post('/start')
 async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
-    # Ensure guest user exists before any DB operations
+    # Ensure user exists
     from utils.guest_manager import ensure_guest_user
     await ensure_guest_user(db, req.user_id)
     
@@ -39,14 +39,16 @@ async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
     # Generate First Question
     initial_ai = {}
     if req.ai_enabled:
-        resp = await safe_chat_completion(system_prompt, "Start game at Light Layer.", max_tokens=300)
+        resp = await safe_chat_completion(system_prompt, "Start Level 1: Surface. Pose an introductory philosophical question. [FORMAT: JSON]", max_tokens=300)
         try:
              initial_ai = json.loads(resp)
         except:
-             initial_ai = {"question": "What brings you joy today?", "layer": "Light", "reflection": ""} 
+             initial_ai = {"question": "What mask do you wear most often?", "layer": 1, "reflection": "The journey begins."} 
 
     initial_state = {
-        "layer": "Light",
+        "layer": 1,
+        "integrity": 100,
+        "vulnerability": 10,
         "turn": 1,
         "current_question": initial_ai.get("question"),
         "ai_enabled": req.ai_enabled,
@@ -54,39 +56,73 @@ async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
     }
     
     session = await gm.create_session(game_slug=GAME_SLUG, host_id=req.user_id, initial_state=initial_state)
-    await gm.join_session(session.session_id, req.user_id, {"role": "Host"})
-    
+    await gm.join_session(session.session_id, req.user_id, {"role": "Seeker"})
     group_id = await create_game_chat_group(db, session.session_id, req.user_id)
-    
     return {'ok': True, 'session_id': session.session_id, 'group_id': group_id, 'state': session.state}
 
 @router.post('/action')
 async def action(req: ActionReq, db: AsyncSession = Depends(get_async_db)):
     gm = GameManager(db)
     session = await gm.get_session(req.session_id)
-    current_state = session.state
+    if not session: raise HTTPException(status_code=404, detail="Session not found")
+    
+    s = session.state
     
     ai_response = {}
-    if current_state.get("ai_enabled"):
-        system_prompt = load_system_prompt(GAME_SLUG)
-        # Dynamic Feedback Integration
-        observer_note = ""
-        player_data = session.players.get(req.user_id, {})
-        if player_data.get("truth_mismatch"):
-             observer_note = f"\n[SHADOW OBSERVER NOTE]: {player_data.get('last_commentary')} Use this inconsistency to ask a more challenging or pointed question in the next layer."
+    system_prompt = load_system_prompt(GAME_SLUG)
+    
+    # Observer logic
+    observer_note = ""
+    if session.analysis and req.user_id in session.analysis:
+        p_analysis = session.analysis[req.user_id]
+        if p_analysis.get("truth_mismatch_detected"):
+            observer_note = f"\n[SHADOW OBSERVER: {p_analysis.get('fun_commentary')}]"
 
-        context = f"Current Layer: {current_state.get('layer')}\nLast Question: {current_state.get('current_question')}\nPlayer Answer: {req.content}\nTurn: {current_state.get('turn')}{observer_note}"
-        resp_str = await safe_chat_completion(system_prompt, context, max_tokens=400)
-        try:
-            ai_response = json.loads(resp_str)
-        except:
-             ai_response = {"question": "Let's continue.", "layer": current_state.get("layer"), "reflection": "Thanks for sharing."}
+    context = f"""
+    Current Level: {s.get('layer')}
+    Integrity: {s.get('integrity')}
+    Vulnerability: {s.get('vulnerability')}
+    Question: {s.get('current_question')}
+    Answer: {req.content}{observer_note}
+    
+    Evaluate the truth. Respond in JSON. 
+    Include [UPDATE: integrity-X, vulnerability+X, layer+1] if they were honest.
+    """
+    
+    resp_str = await safe_chat_completion(system_prompt, context, max_tokens=500)
+    try:
+        ai_response = json.loads(resp_str)
+    except:
+        ai_response = {"question": "Let us go deeper.", "layer": s.get("layer", 1) + 1, "reflection": "Your silence speaks volumes."}
              
+    # Parse Updates
+    import re
+    new_integ = s.get('integrity', 100)
+    new_vuln = s.get('vulnerability', 10)
+    new_layer = s.get('layer', 1)
+    
+    narrative_text = ai_response.get("reflection", "")
+    meta_match = re.search(r'\[UPDATE:\s*(.*?)\]', narrative_text)
+    if meta_match:
+        narrative_text = narrative_text.replace(meta_match.group(0), "").strip()
+        updates = meta_match.group(1).split(",")
+        for up in updates:
+            up = up.strip()
+            if up.startswith("integrity"):
+                new_integ = min(100, max(0, new_integ + int(up[9:])))
+            elif up.startswith("vulnerability"):
+                new_vuln = min(100, max(0, new_vuln + int(up[13:])))
+            elif up.startswith("layer+1"):
+                new_layer += 1
+
     new_state = {
-        "layer": ai_response.get("layer", current_state.get("layer")),
+        **s,
+        "layer": new_layer,
+        "integrity": new_integ,
+        "vulnerability": new_vuln,
         "current_question": ai_response.get("question"),
-        "last_ai_response": ai_response,
-        "turn": current_state.get("turn", 0) + 1
+        "last_ai_response": {**ai_response, "reflection": narrative_text},
+        "turn": s.get("turn", 0) + 1
     }
     
     updated = await gm.update_state(req.session_id, new_state, history_entry={"user": req.user_id, "answer": req.content})

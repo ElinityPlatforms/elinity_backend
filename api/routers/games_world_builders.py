@@ -29,7 +29,7 @@ class ActionReq(BaseModel):
 
 @router.post('/start')
 async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
-    # Ensure guest user exists before any DB operations
+    # Ensure user exists
     from utils.guest_manager import ensure_guest_user
     await ensure_guest_user(db, req.user_id)
     
@@ -39,14 +39,17 @@ async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
     # Opening
     initial_ai = {}
     if req.ai_enabled:
-        resp = await safe_chat_completion(system_prompt, "Start Round 1: Geography.", max_tokens=300)
+        resp = await safe_chat_completion(system_prompt, "Round 1: Geography. Describe the birth of a new realm. [FORMAT: JSON]", max_tokens=300)
         try: initial_ai = json.loads(resp)
-        except: initial_ai = {"narrative": "Welcome creators.", "next_prompt": "Describe the land.", "visual_cue": "Empty Map"}
+        except: initial_ai = {"narrative": "At first, there was only the void...", "next_prompt": "Describe the first landmass.", "visual_cue": "Cosmic Genesis"}
 
     initial_state = {
         "round": "Geography",
         "turn": 1,
-        "world_codex": [], # List of codex entries
+        "mana": 100,
+        "population": 0,
+        "stability": 100,
+        "world_codex": [], 
         "ai_enabled": req.ai_enabled,
         "last_ai_response": initial_ai,
         "player_order": [req.user_id],
@@ -54,7 +57,7 @@ async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
     }
     
     session = await gm.create_session(game_slug=GAME_SLUG, host_id=req.user_id, initial_state=initial_state)
-    await gm.join_session(session.session_id, req.user_id, {"role": "Host"})
+    await gm.join_session(session.session_id, req.user_id, {"role": "Architect"})
     group_id = await create_game_chat_group(db, session.session_id, req.user_id)
     return {'ok': True, 'session_id': session.session_id, 'group_id': group_id, 'state': session.state}
 
@@ -62,59 +65,89 @@ async def start(req: StartReq, db: AsyncSession = Depends(get_async_db)):
 async def action(req: ActionReq, db: AsyncSession = Depends(get_async_db)):
     gm = GameManager(db)
     session = await gm.get_session(req.session_id)
-    current_state = session.state
+    if not session: raise HTTPException(status_code=404, detail="Session not found")
     
-    # Turn Validation
-    player_order = current_state.get("player_order", [])
-    turn_index = current_state.get("turn_index", 0)
+    s = session.state
+    player_order = s.get("player_order", [])
+    turn_index = s.get("turn_index", 0)
     
     if not player_order: player_order = sorted(list(session.players.keys()))
-    from fastapi import HTTPException
     if player_order and req.user_id != player_order[turn_index % len(player_order)]:
          raise HTTPException(status_code=400, detail="Not your turn!")
     
-    codex = current_state.get("world_codex", [])
-    current_round = current_state.get("round", "Geography")
+    codex = s.get("world_codex", [])
+    current_round = s.get("round", "Geography")
 
-    # Round Logic
+    # Round Transition Logic
     if req.action == "advance_round":
         rounds = ["Geography", "Culture", "History", "Characters", "End"]
         try:
             next_idx = rounds.index(current_round) + 1
             current_round = rounds[next_idx] if next_idx < len(rounds) else "End"
-        except:
-            current_round = "Geography"
+        except: current_round = "Geography"
             
     # AI Logic
     ai_response = {}
-    if current_state.get("ai_enabled"):
-        system_prompt = load_system_prompt(GAME_SLUG)
-        
-        # INJECT OBSERVER FEEDBACK
-        observer_context = ""
-        if session.analysis and req.user_id in session.analysis:
-            p_analysis = session.analysis[req.user_id]
-            if p_analysis.get("truth_mismatch_detected") and p_analysis.get("fun_commentary"):
-                observer_context = f"\n[SHADOW OBSERVER NOTE: Player is inconsistent with their real profile: {p_analysis.get('fun_commentary')}. Incorporate this into the narrative if it makes it more fun!]"
+    system_prompt = load_system_prompt(GAME_SLUG)
+    
+    # Observer context from P1 analysis
+    observer_context = ""
+    if session.analysis and req.user_id in session.analysis:
+        p_analysis = session.analysis[req.user_id]
+        if p_analysis.get("truth_mismatch_detected"):
+            observer_context = f"\n[OBSERVER NOTE: {p_analysis.get('fun_commentary')}]"
 
-        context = f"Current Round: {current_round}\nExisting Codex: {json.dumps(codex[-3:])}\nPlayer Input: {req.content}{observer_context}"
-        resp_str = await safe_chat_completion(system_prompt, context, max_tokens=400)
-        try:
-            ai_response = json.loads(resp_str)
-        except:
-            ai_response = {"narrative": "Recorded.", "codex_entry": {"title": "Unknown", "description": req.content}, "visual_cue": "Map Update"}
+    context = f"""
+    Epoch: {current_round}
+    Stats: Mana={s.get('mana')}, Pop={s.get('population')}, Stability={s.get('stability')}
+    Codex: {json.dumps(codex[-3:])}
+    Input: {req.content}{observer_context}
+    
+    Respond in JSON. Include [UPDATE: mana-10, pop+50, stability-5] in 'narrative' if world shifts.
+    """
+    
+    resp_str = await safe_chat_completion(system_prompt, context, max_tokens=500)
+    try:
+        ai_response = json.loads(resp_str)
+    except:
+        ai_response = {"narrative": "The world shifts as you speak.", "codex_entry": {"title": "Creation", "description": req.content, "type": current_round}}
             
+    # Parse Updates
+    import re
+    new_mana = s.get('mana', 100)
+    new_pop = s.get('population', 0)
+    new_stab = s.get('stability', 100)
+    
+    narrative_text = ai_response.get("narrative", "")
+    meta_match = re.search(r'\[UPDATE:\s*(.*?)\]', narrative_text)
+    if meta_match:
+        narrative_text = narrative_text.replace(meta_match.group(0), "").strip()
+        updates = meta_match.group(1).split(",")
+        for up in updates:
+            up = up.strip()
+            if up.startswith("mana"):
+                new_mana = max(0, new_mana + int(up[4:]))
+            elif up.startswith("pop"):
+                new_pop = max(0, new_pop + int(up[3:]))
+            elif up.startswith("stability"):
+                new_stab = min(100, max(0, new_stab + int(up[9:])))
+
     if ai_response.get("codex_entry"):
-        codex.append(ai_response["codex_entry"])
+        entry = ai_response["codex_entry"]
+        if "type" not in entry: entry["type"] = current_round
+        codex.append(entry)
         
-    # Calculate Next Turn
     next_turn_index = (turn_index + 1) % len(player_order)
 
     new_state = {
+        **s,
         "round": current_round,
         "world_codex": codex,
-        "last_ai_response": ai_response,
-        "turn": current_state.get("turn", 0) + 1,
+        "mana": new_mana,
+        "population": new_pop,
+        "stability": new_stab,
+        "last_ai_response": {**ai_response, "narrative": narrative_text},
+        "turn": s.get("turn", 0) + 1,
         "player_order": player_order,
         "turn_index": next_turn_index
     }
