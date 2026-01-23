@@ -77,8 +77,9 @@ echo "🚀 Launching Elinity on GCP (Port 80)..."
 sudo docker-compose up -d --build
 
 # 6. Database Migration
-echo "🔄 Running Local Migrations..."
-sleep 10
+echo "🔄 Syncing Database Schema..."
+sleep 15
+sudo docker exec elinity-gcp-app alembic stamp head
 sudo docker exec elinity-gcp-app alembic upgrade head
 
 echo "------------------------------------------------"
