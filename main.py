@@ -169,7 +169,7 @@ except Exception:
 #         # don't prevent the app from starting. The endpoints will be unavailable until dependencies are installed.
 #         import logging
 #         logging.getLogger(__name__).warning("Voice onboarding routers not loaded (optional). Install audio dependencies to enable them.")
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from database.session import engine, Base
 import time
 from sqlalchemy.exc import OperationalError
@@ -426,11 +426,36 @@ async def debug_imports():
         "routes": [route.path for route in app.routes]
     }
 
-@app.get("/", response_class=HTMLResponse)
-async def root(rate_limited: bool = Depends(limiter)):
-    with open("templates/index.html", encoding="utf-8") as f:
-        return f.read()
 
+# ------------------------------------------------------------------
+# FRONTEND SERVING (Option B: Monolith)
+# ------------------------------------------------------------------
+# If we have the React build in static/game-ui, serve it!
+ui_path = Path("static/game-ui")
+if ui_path.exists():
+    # 1. Mount the assets folder
+    app.mount("/assets", StaticFiles(directory=str(ui_path / "assets")), name="ui-assets")
+    
+    # 2. Serve index.html for root and SPA routes
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Allow API routes to pass through
+        if full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            return None
+            
+        # Check if file exists (e.g. favicon.ico)
+        file_path = ui_path / full_path
+        if file_path.exists() and file_path.is_file():
+             return FileResponse(file_path)
+             
+        # Fallback to index.html for React Router
+        return FileResponse(ui_path / "index.html")
+else:
+    # Fallback to simple template if no UI build found
+    @app.get("/", response_class=HTMLResponse)
+    async def root(rate_limited: bool = Depends(limiter)):
+        with open("templates/index.html", encoding="utf-8") as f:
+            return f.read()
 
 @app.get("/health")
 async def health():
