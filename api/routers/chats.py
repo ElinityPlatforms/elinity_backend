@@ -3,10 +3,15 @@ from models.chat import Chat, Group, GroupMember
 from database.session import get_db, Session
 from utils.token import get_current_user
 from models.user import Tenant
+from models.user import Tenant, PersonalInfo, ProfilePicture
 from schemas.chat import ChatSchema, ChatCreateSchema
 from services.ai_service import AIService
 import json
-from sqlalchemy.orm import joinedload
+import uuid
+from datetime import datetime, timedelta
+from sqlalchemy.orm import aliased
+from sqlalchemy import func, desc, or_
+
 
 router = APIRouter()
 ai_service = AIService()
@@ -75,43 +80,216 @@ async def send_direct_message(target_id: str, payload: dict, current_user: Tenan
     return {"status": "ok", "chat_id": chat_obj.id, "group_id": group.id}
 
 
-@router.post("/{group_id}/analysis", tags=["Chats"])
-async def analyze_group_chat(group_id: str, current_user: Tenant = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Run AI analysis on a group's recent conversation: suggestions, tone, quick feedback."""
-    # Load recent messages
+    return {"status": "ok", "chat_id": chat_obj.id, "group_id": group.id}
+
+
+@router.get("/inbox", tags=["Chats"])
+def get_inbox(current_user: Tenant = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get list of active conversations (inbox) with last message and metadata."""
+    
+    # 1. Get all groups I am a member of
+    my_memberships = db.query(GroupMember).filter(GroupMember.tenant == current_user.id).all()
+    group_ids = [m.group for m in my_memberships]
+
+    if not group_ids:
+        return []
+
+    # 2. Fetch groups
+    groups = db.query(Group).filter(Group.id.in_(group_ids), Group.status == 'active').all()
+    
+    inbox_items = []
+
+    for group in groups:
+        # 3. Get last message
+        last_msg = db.query(Chat).filter(Chat.group == group.id).order_by(Chat.created_at.desc()).first()
+        
+        item = {
+            "group_id": group.id,
+            "type": group.type, # 'user_ai', 'users_ai', 'group'
+            "name": group.name,
+            "avatar": None,
+            "last_message": last_msg.message if last_msg else "No messages yet",
+            "time": last_msg.created_at if last_msg else group.created_at,
+            "unread": 0, # TODO: implement unread count
+            "other_user_id": None
+        }
+
+        # 4. Enrich name/avatar if it's a DM (type='users_ai')
+        if group.type == 'users_ai':
+            # Find the other member
+            other_member = db.query(GroupMember).filter(
+                GroupMember.group == group.id, 
+                GroupMember.tenant != current_user.id
+            ).first()
+            
+            if other_member:
+                # Get their personal info
+                other_info = db.query(PersonalInfo).filter(PersonalInfo.tenant == other_member.tenant).first()
+                # Get profile pic
+                other_pic = db.query(ProfilePicture).filter(ProfilePicture.tenant == other_member.tenant).first()
+                
+                if other_info:
+                    item["name"] = f"{other_info.first_name} {other_info.last_name}".strip()
+                else:
+                    item["name"] = "Unknown User"
+                    
+                if other_pic:
+                    item["avatar"] = other_pic.url
+                else:
+                     # Fallback random avatar
+                    item["avatar"] = f"https://randomuser.me/api/portraits/thumb/men/{len(inbox_items)}.jpg"
+
+                item["other_user_id"] = other_member.tenant
+        
+        inbox_items.append(item)
+
+    # Sort by time desc
+    inbox_items.sort(key=lambda x: x['time'], reverse=True)
+    return inbox_items
+
+
+@router.get("/history/{group_id}", tags=["Chats"])
+def get_chat_history(group_id: str, current_user: Tenant = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get chat history for a specific group."""
+    # Check membership
+    is_member = db.query(GroupMember).filter(
+        GroupMember.group == group_id, 
+        GroupMember.tenant == current_user.id
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    # Fetch chats
     chats = db.query(Chat).filter(Chat.group == group_id).order_by(Chat.created_at.asc()).all()
-    if not chats:
-        raise HTTPException(status_code=404, detail="No chats found for group")
+    
+    # Enrich sender info
+    result = []
+    sender_cache = {}
+    
+    for c in chats:
+        sender_name = "Unknown"
+        sender_avatar = None
+        
+        if c.sender == current_user.id:
+            sender_name = "Me"
+            # Get my avatar if needed, or frontend handles "Me"
+        elif c.sender in sender_cache:
+             sender_name, sender_avatar = sender_cache[c.sender]
+        else:
+            pinfo = db.query(PersonalInfo).filter(PersonalInfo.tenant == c.sender).first()
+            ppic = db.query(ProfilePicture).filter(ProfilePicture.tenant == c.sender).first()
+            if pinfo:
+                sender_name = f"{pinfo.first_name} {pinfo.last_name}".strip()
+            if ppic:
+                sender_avatar = ppic.url
+            sender_cache[c.sender] = (sender_name, sender_avatar)
 
-    transcript = "\n".join([f"{c.sender}:{c.message}" for c in chats[-50:]])
-    prompt = (
-        "You are a helpful assistant. Analyze the following conversation and provide:\n"
-        "1) A short summary (1-2 sentences)\n"
-        "2) Tone detection (e.g., friendly, annoyed, neutral)\n"
-        "3) 3 short suggestions to improve the conversation or next steps\n"
-        "Return a JSON object with keys: summary, tone, suggestions.\n\nConversation:\n" + transcript
-    )
+        result.append({
+            "id": c.id,
+            "sender_id": c.sender,
+            "sender_name": sender_name,
+            "sender_avatar": sender_avatar,
+            "text": c.message,
+            "time": c.created_at,
+            "is_me": (c.sender == current_user.id)
+        })
+        
+    return result
 
-    try:
-        from services.ai_service import AIService
-        ai_service = AIService()
-        # ai_service.chat() is async, so await it directly
-        resp_text = await ai_service.chat([{"role": "system", "content": prompt}])
-    except Exception as e:
-        # Log the error for debugging, but return a structured response
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error during chat analysis: {str(e)}")
-        resp_text = "(ai error)"
 
-    # try parse JSON
-    parsed = None
-    try:
-        parsed = json.loads(resp_text)
-    except Exception:
-        parsed = {"summary": resp_text, "tone": None, "suggestions": []}
+@router.post("/seed", tags=["Chats"])
+def seed_chat_data(current_user: Tenant = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Generate mock users and chats for the current user."""
+    
+    # 1. Create fake users
+    fake_users = [
+        {"fname": "Ryan", "lname": "Lee", "gender": "male", "msg": "Hey! Long time no see."},
+        {"fname": "Jessica", "lname": "Alba", "gender": "female", "msg": "Are we still on for coffee?"},
+        {"fname": "Mark", "lname": "Ruffalo", "gender": "male", "msg": "I sent the files."},
+        {"fname": "Alice", "lname": "Wonder", "gender": "female", "msg": "Did you see the new movie?"}
+    ]
+    
+    created_count = 0
+    
+    for u in fake_users:
+        # Check if exists (by email to avoid dups if run multiple times)
+        email = f"{u['fname'].lower()}.{u['lname'].lower()}@example.com"
+        exists = db.query(Tenant).filter(Tenant.email == email).first()
+        
+        target_user = exists
+        if not target_user:
+            # Create Tenant
+            target_user = Tenant(email=email, password="password", role="user")
+            db.add(target_user)
+            db.commit()
+            db.refresh(target_user)
+            
+            # Create PersonalInfo
+            pinfo = PersonalInfo(
+                tenant=target_user.id, 
+                first_name=u['fname'], 
+                last_name=u['lname'],
+                gender=u['gender']
+            )
+            db.add(pinfo)
+            
+            # Create ProfilePicture
+            gender_code = "women" if u['gender'] == "female" else "men"
+            import random
+            num = random.randint(1, 90)
+            ppic = ProfilePicture(tenant=target_user.id, url=f"https://randomuser.me/api/portraits/{gender_code}/{num}.jpg")
+            db.add(ppic)
+            db.commit()
+            created_count += 1
+        
+        # 2. Create Group (DM)
+        # Sort IDs to make unique name
+        ids = sorted([current_user.id, target_user.id])
+        group_name = f"dm_{ids[0]}_{ids[1]}"
+        
+        group = db.query(Group).filter(Group.name == group_name).first()
+        if not group:
+            group = Group(name=group_name, tenant=current_user.id, type='users_ai', status='active')
+            db.add(group)
+            db.commit()
+            db.refresh(group)
+            
+            # Add members
+            m1 = GroupMember(group=group.id, tenant=current_user.id)
+            m2 = GroupMember(group=group.id, tenant=target_user.id)
+            db.add_all([m1, m2])
+            db.commit()
+            
+        # 3. Add Messages if empty
+        chats_exist = db.query(Chat).filter(Chat.group == group.id).count()
+        if chats_exist == 0:
+            # Add a few messages
+            from datetime import timedelta
+            # Msg 1 from them
+            c1 = Chat(
+                sender=target_user.id, 
+                group=group.id, 
+                message=u['msg'], 
+                created_at=datetime.now(timezone.utc) - timedelta(days=1)
+            )
+            # Msg 2 from me
+            c2 = Chat(
+                sender=current_user.id, 
+                group=group.id, 
+                message="Yeah, definitely! Let's catch up.",
+                created_at=datetime.now(timezone.utc) - timedelta(hours=5)
+            )
+             # Msg 3 from them
+            c3 = Chat(
+                sender=target_user.id, 
+                group=group.id, 
+                message="Cool. How about Friday?",
+                created_at=datetime.now(timezone.utc) - timedelta(minutes=10)
+            )
+            db.add_all([c1, c2, c3])
+            db.commit()
 
-    return {"analysis": parsed}
+    return {"message": f"Seeded {created_count} users and conversations."}
 
 
 @router.post("/icebreaker", tags=["Chats"])

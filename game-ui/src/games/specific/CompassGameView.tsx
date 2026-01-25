@@ -16,7 +16,8 @@ import {
     Sunrise,
     Waves,
     Cpu,
-    Heart
+    Heart,
+    Users
 } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { sendAction } from '../../api/client';

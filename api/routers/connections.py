@@ -222,16 +222,59 @@ async def confirm_relationship(
     db.commit()
     return {"ok": True, "message": "Moved to Personal Circle"}
 
+@router.get("/", tags=["Connections P1"])
+async def list_connections(
+    status_filter: str = "personal_circle",
+    current_user: Tenant = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """List all connections with a specific status (default: personal_circle)"""
+    conns = db.query(Connection).filter(
+        or_(Connection.user_a_id == current_user.id, Connection.user_b_id == current_user.id),
+        Connection.status == status_filter
+    ).all()
+    
+    results = []
+    for c in conns:
+        other_id = c.user_b_id if c.user_a_id == current_user.id else c.user_a_id
+        other_user = db.query(Tenant).filter(Tenant.id == other_id).first()
+        if other_user:
+             # Basic info mapping
+             first = other_user.personal_info.first_name if other_user.personal_info else ""
+             last = other_user.personal_info.last_name if other_user.personal_info else ""
+             name = f"{first} {last}".strip() or "Unknown"
+             
+             results.append({
+                 "id": str(other_user.id),
+                 "connection_id": str(c.id),
+                 "name": name,
+                 "avatar": other_user.profile_image_url, 
+                 "relation": "Connection", 
+                 "bio": other_user.bio,
+                 "mode": c.mode,
+                 "status": c.status,
+                 "metrics": {
+                     "healthScore": int(c.score * 100) if c.score else 50,
+                     "positiveInteractions": 0,
+                     "sharedActivities": []
+                 }
+                 # History can be fetched separately if needed
+             })
+    return results
+
 def format_connection(conn, db):
     # Fetch User B profile
     user_b = db.query(Tenant).filter(Tenant.id == conn.user_b_id).first()
+    first = user_b.personal_info.first_name if user_b.personal_info else ""
+    last = user_b.personal_info.last_name if user_b.personal_info else ""
+    name = f"{first} {last}".strip() or "Unknown"
+
     return {
         "id": conn.id,
         "user_b": {
             "id": user_b.id,
-            "name": f"{user_b.personal_info.first_name} {user_b.personal_info.last_name}",
-            "location": user_b.personal_info.location,
-            # Add other profile fields
+            "name": name,
+            "location": user_b.personal_info.location if user_b.personal_info else "",
         },
         "score": conn.score,
         "mode": conn.mode,
