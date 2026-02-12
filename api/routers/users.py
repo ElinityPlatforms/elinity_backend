@@ -272,7 +272,6 @@ async def update_aspiration_and_reflections(req: AspirationAndReflectionsSchema,
         obj = AspirationAndReflections(tenant=current_user.id, **req.model_dump())
         db.add(obj)
     db.commit(); db.refresh(obj)
-    db.commit(); db.refresh(obj)
     return obj
 
 @router.put(RouteEnum.ME + UserRouteEnum.LIFESTYLE, response_model=LifestyleSchema, tags=[RouteTagEnum.ME])
@@ -285,6 +284,7 @@ async def update_lifestyle(req: LifestyleSchema, db: Session = Depends(get_db), 
         db.add(obj)
     db.commit(); db.refresh(obj)
     return obj
+@router.put(RouteEnum.ME + UserRouteEnum.KEY_MEMORIES, response_model=KeyMemoriesSchema, tags=[RouteTagEnum.ME])
 async def update_key_memories(req: KeyMemoriesSchema, db: Session = Depends(get_db), current_user: Tenant = Depends(get_current_user)):
     obj = db.query(KeyMemories).filter(KeyMemories.tenant == current_user.id).first()
     if obj:

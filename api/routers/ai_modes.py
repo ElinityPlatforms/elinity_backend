@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List
-# Placeholder imports for core logic
-from utils.token import get_current_user
-from models.user import Tenant
-
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-router = APIRouter(tags=["AI Modes"])
-
-class StartModeSchema(BaseModel):
-    message: str
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
+from models.conversation import ConversationSession, ConversationTurn
+from models.user import Tenant
+import json
+import uuid
+from api.routers._profile_helper import get_user_profile_summary, get_user_full_profile_data
+from database.session import get_async_db
+from utils.token import get_current_user
+from api.routers._llm import safe_chat_completion
 
 from elinity_ai.modes.prompts import (
     SYSTEM_PROMPT_PODCAST, SYSTEM_PROMPT_MEDITATION, SYSTEM_PROMPT_DEEP_THINKING,
@@ -24,12 +26,23 @@ from elinity_ai.modes.prompts import (
     HISTORICAL_WOOLF, HISTORICAL_WATTS
 )
 
-from api.routers._llm import safe_chat_completion
+router = APIRouter(tags=["AI Modes"])
+
+class StartModeSchema(BaseModel):
+    message: str
+    session_id: Optional[str] = None
 
 @router.post("/{mode_name}/start")
-async def start_mode_session(mode_name: str, payload: StartModeSchema, current_user: Tenant = Depends(get_current_user)):
-    """Start or continue a session in a specific AI mode."""
+async def start_mode_session(
+    mode_name: str, 
+    payload: StartModeSchema, 
+    db: AsyncSession = Depends(get_async_db),
+    current_user: Tenant = Depends(get_current_user)
+):
+    """Start or continue a session in a specific AI mode with memory and context."""
     message = payload.message
+    session_id = payload.session_id
+    
     valid_modes = {
         "podcast": SYSTEM_PROMPT_PODCAST,
         "meditation": SYSTEM_PROMPT_MEDITATION,
@@ -66,26 +79,95 @@ async def start_mode_session(mode_name: str, payload: StartModeSchema, current_u
         "aurelius": HISTORICAL_AURELIUS,
         "woolf": HISTORICAL_WOOLF,
         "watts": HISTORICAL_WATTS,
-        # Standard fallbacks
-        "coach": PERSONA_TOUGH_LOVE,
-        "therapist": PERSONA_EMPATHETIC_THERAPIST,
-        "game_creator": "You are a game designer. Help the user create a new game concept with rules.",
-        "lumi": "You are Lumi, a helpful and wise AI companion."
     }
+
     
     if mode_name not in valid_modes:
         raise HTTPException(404, f"Mode '{mode_name}' not found")
         
-    system_prompt = valid_modes[mode_name]
+    system_prompt_base = valid_modes[mode_name]
+
+    # 1. Get/Create Session
+    conv_session = None
+    skill_type = f"mode_{mode_name}"
     
-    # Call Real LLM
-    response = await safe_chat_completion(
-        system=system_prompt,
-        user_prompt=message,
-        max_tokens=500
+    if session_id:
+        try:
+            session_uuid = uuid.UUID(session_id)
+            result = await db.execute(select(ConversationSession).where(ConversationSession.id == session_uuid))
+            conv_session = result.scalars().first()
+        except: pass
+
+    if not conv_session:
+        # Check most recent for this specific mode
+        result = await db.execute(
+            select(ConversationSession)
+            .where(ConversationSession.user_id == uuid.UUID(current_user.id), ConversationSession.skill_type == skill_type)
+            .order_by(desc(ConversationSession.created_at)).limit(1)
+        )
+        conv_session = result.scalars().first()
+        
+        if not conv_session:
+            conv_session = ConversationSession(user_id=uuid.UUID(current_user.id), skill_id=0, skill_type=skill_type)
+            db.add(conv_session)
+            await db.commit()
+            await db.refresh(conv_session)
+
+    # 2. Get Profile Context
+    user_summary = await get_user_profile_summary(db, current_user.id)
+    full_profile_json = await get_user_full_profile_data(db, current_user.id)
+    
+    system_prompt = f"{system_prompt_base}\n\n" \
+                   f"CURRENT USER CONTEXT (Radical Awareness):\n{user_summary}\n\n" \
+                   f"FULL PROFILE DATA (JSON):\n{json.dumps(full_profile_json, indent=2)}\n\n" \
+                   "IMPORTANT: Write in a clean, human, and conversational tone. " \
+                   "Use standard line breaks and bullet points for readability. Avoid technical IDs or scores." \
+                   "Use this knowledge to personalize your guidance precisely."
+
+
+    # 3. Load History
+    result = await db.execute(
+        select(ConversationTurn).where(ConversationTurn.session_id == conv_session.id)
+        .order_by(desc(ConversationTurn.timestamp)).limit(10)
     )
+    turns = result.scalars().all()
+    history = [{"role": t.role, "content": t.content} for t in reversed(turns)]
+
+    # 4. Call AI
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": message})
     
-    return {"mode": mode_name, "ai_message": response}
+    response = await safe_chat_completion(messages=messages)
+    
+    # 5. Save Turns
+    db.add_all([
+        ConversationTurn(session_id=conv_session.id, role="user", content=message),
+        ConversationTurn(session_id=conv_session.id, role="assistant", content=response)
+    ])
+    await db.commit()
+    
+    return {"mode": mode_name, "ai_message": response, "session_id": str(conv_session.id)}
+
+@router.get("/{mode_name}/history", tags=["AI Modes"])
+async def get_mode_history(mode_name: str, db: AsyncSession = Depends(get_async_db), current_user: Tenant = Depends(get_current_user)):
+    """Retrieve history for a specific mode."""
+    skill_type = f"mode_{mode_name}"
+    result = await db.execute(
+        select(ConversationSession)
+        .where(ConversationSession.user_id == uuid.UUID(current_user.id), ConversationSession.skill_type == skill_type)
+        .order_by(desc(ConversationSession.created_at)).limit(1)
+    )
+    session = result.scalars().first()
+    if not session: return []
+
+    result = await db.execute(
+        select(ConversationTurn).where(ConversationTurn.session_id == session.id)
+        .order_by(ConversationTurn.timestamp.asc())
+    )
+    turns = result.scalars().all()
+    return [{"id": str(t.id), "role": t.role, "content": t.content, "timestamp": t.timestamp} for t in turns]
+
 
 import json
 from pathlib import Path

@@ -104,18 +104,26 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)) -> Token:
     # Auto-detect incomplete profile: if key profile sections missing, create notification
     try:
         pinfo = user.personal_info
-        incomplete = False
-        if not pinfo:
-            incomplete = True
-        else:
-            # If age or location or profile_pictures empty, mark incomplete
-            if not pinfo.age or not pinfo.first_name or not pinfo.location:
-                incomplete = True
-        if incomplete:
-            note = Notification(tenant=user.id, title="Please complete your profile", message="We noticed some profile sections are incomplete. Please complete your profile to get better recommendations.")
-            db.add(note); db.commit()
+        missing_fields = []
+        if not pinfo or not pinfo.first_name: missing_fields.append("Basic Profile")
+        if not user.interests_and_hobbies or not user.interests_and_hobbies.interests: missing_fields.append("Interests")
+        if not user.big_five_traits: missing_fields.append("Psychological Traits")
+        
+        if missing_fields:
+            existing_note = db.query(Notification).filter(
+                Notification.tenant == user.id, 
+                Notification.title == "Soul-Sync: Complete Your Identity"
+            ).first()
+            
+            if not existing_note:
+                note = Notification(
+                    tenant=user.id, 
+                    title="Soul-Sync: Complete Your Identity", 
+                    message=f"To unlock the full potential of your connections, please complete your profile. Missing: {', '.join(missing_fields)}. Chat with Lumi if you need help!"
+                )
+                db.add(note)
+                db.commit()
     except Exception:
-        # non-fatal
         pass
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 

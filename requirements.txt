@@ -43,7 +43,7 @@ pytz
 python-slugify
 
 pinecone
-pymilvus
+pymilvus[model]>=2.4.0
 
 # Langchain Eco System
 langchain

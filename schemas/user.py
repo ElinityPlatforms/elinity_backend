@@ -4,7 +4,7 @@ from typing import Optional, List
 from pydantic import EmailStr
 
 class ProfilePictureBase(BaseModel):
-    url: HttpUrl
+    url: str
 
 class ProfilePictureCreate(ProfilePictureBase):
     pass
@@ -63,11 +63,17 @@ class MBTITraits(BaseModel):
     class Config:
         from_attributes = True
 class Psychology(BaseModel): 
+    communication_style: Optional[str] = None
     attachment_style: Optional[str] = None
     emotional_intelligence: Optional[float] = 0.5
     cognitive_style: Optional[str] = None
     stress_tolerance: Optional[str] = None
     conflict_resolution_style: Optional[str] = None
+    trusting: Optional[float] = 0.0
+    supportive: Optional[float] = 0.0
+    secure: Optional[float] = 0.0
+    anxious: Optional[float] = 0.0
+    avoidant: Optional[float] = 0.0
 
     class Config:
         from_attributes = True
@@ -84,6 +90,7 @@ class ValuesBeliefsAndGoals(BaseModel):
     beliefs: Optional[str] = None
     personal_goals: List[str] = []
     professional_goals: List[str] = []
+    aspirations: List[str] = []
 
     class Config:
         from_attributes = True
@@ -105,8 +112,11 @@ class RelationshipPreferences(BaseModel):
     seeking: Optional[str] = None
     looking_for: List[str] = []
     relationship_goals: Optional[str] = None
-    dealbreakers: List[str] = []
+    deal_breakers: List[str] = []
+    red_flags: List[str] = []
+    green_flags: List[str] = []
     what_i_offer: List[str] = []
+    what_i_want: List[str] = []
 
     class Config:
         from_attributes = True
@@ -176,6 +186,7 @@ class User(BaseModel):
     id: str
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
+    role: str = "user"
     last_login: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None   
@@ -204,6 +215,8 @@ class RecommendedUserSchema(BaseModel):
     tenant: TenantSchema
     score: float
     ai_insight: str
+    connection_status: Optional[str] = None
+    connection_id: Optional[str] = None
      
 class UserPersonaSchema(BaseModel): 
     personal_info: Optional[PersonalInfo] = Field(None, description="User's personal information")

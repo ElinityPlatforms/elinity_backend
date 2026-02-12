@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import Column, String, DateTime, ForeignKey, CheckConstraint, Boolean
+
 import uuid
 from database.session import Base
 
@@ -90,8 +91,10 @@ class Chat(Base):
     group = Column(String, ForeignKey("groups.id"), nullable=True)     # for group chats
     asset_url = Column(String, ForeignKey("assets.id"), nullable=True)
     message = Column(String, nullable=False)
+    is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, nullable=True)
+
 
 
     class Config:

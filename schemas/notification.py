@@ -27,6 +27,8 @@ class NotificationSchema(BaseModel):
     title: str
     message: str
     type: str
+    notif_metadata: str | None = None
+    read: bool = False
     created_at: datetime
     
     class Config:

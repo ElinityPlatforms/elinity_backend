@@ -3,8 +3,10 @@ from models.chat import Group
 from database.session import get_db, Session
 from utils.token import get_current_user
 from models.user import Tenant
-from schemas.chat import GroupSchema, GroupCreateSchema
+from schemas.chat import GroupSchema, GroupCreateSchema, GroupWizardSchema
 from pydantic import BaseModel
+from models.chat import GroupMember, Chat # Added Chat for welcome message
+import uuid
 
 router = APIRouter()
 
@@ -34,6 +36,49 @@ async def get_groups(
         Group.tenant == current_user.id,
         Group.status == 'active'
     ).all()
+
+
+@router.post("/wizard", tags=["Groups"], response_model=GroupSchema)
+async def create_group_wizard(
+    data: GroupWizardSchema,
+    current_user: Tenant = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """One-call setup for a group with members."""
+    # 1. Create the Group
+    group_obj = Group(
+        tenant=current_user.id,
+        name=data.name,
+        description=data.description or f"Discussion group created by {current_user.id}",
+        type='group',
+        status='active'
+    )
+    db.add(group_obj)
+    db.commit()
+    db.refresh(group_obj)
+
+    # 2. Add members
+    # Always add creator as owner
+    owner = GroupMember(group=group_obj.id, tenant=current_user.id, role='owner')
+    db.add(owner)
+
+    # Add other members
+    for member_id in data.member_ids:
+        if member_id != current_user.id:
+            member = GroupMember(group=group_obj.id, tenant=member_id, role='member')
+            db.add(member)
+
+    # 3. Add a welcome message
+    welcome_msg = Chat(
+        sender=current_user.id,
+        group=group_obj.id,
+        message=f"Welcome to {data.name}! We're ready to start chatting."
+    )
+    db.add(welcome_msg)
+    
+    db.commit()
+    db.refresh(group_obj)
+    return group_obj
 
 
 @router.post("/", tags=["Groups"], response_model=GroupSchema)

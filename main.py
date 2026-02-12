@@ -28,19 +28,22 @@ _ROUTER_MODULES = [
     'members',
     'question_cards',
     'lumi',
-    'skill_evaluation',
     'billing',
     'search',
     'tools',
     'recommendations',
     'notifications',
     'upload_file',
-    'upload_file',
     'user_dashboard',
     'blogs',
     'connections',
+    'lumi_coach',
     'lifebook',
     'multimodal',
+    'relationship_skills',
+    'self_growth_skills',
+    'social_skills',
+    'skill_evaluation',
     # Games
     'games_ai_adventure_dungeon',
     'games_ai_comic_creator',
@@ -190,55 +193,42 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create database tables on startup
-    # Try to create tables but tolerate transient DB connection/SSL failures.
-    # This prevents the whole app from exiting when the DB provider temporarily
-    # refuses connections (SSL handshake/allowlist issues). We retry a few times
-    # with exponential backoff and log clear diagnostic messages.
-    max_attempts = 5
-    attempt = 0
-    while attempt < max_attempts:
-        try:
-            Base.metadata.create_all(bind=engine)
-            break
-        except OperationalError as e:
-            attempt += 1
-            wait = min(30, 2 ** attempt)
-            logging.getLogger(__name__).error(
-                "Database initialization failed (attempt %d/%d): %s. Retrying in %ds",
-                attempt, max_attempts, e, wait,
-            )
-            time.sleep(wait)
-    else:
-        logging.getLogger(__name__).error(
-            "Database initialization failed after %d attempts; continuing without DB. "
-            "Ensure DB is reachable, allowlisted, and SSL settings are correct.",
-            max_attempts,
-        )
+    """Application lifespan manager."""
+    print("DEBUG: Entering lifespan...")
+    from database.session import engine, Base
+    import models.user
+    import models.journal
+    import models.social
+    import models.connection
+    import models.chat
+    import models.notifications
+    import models.question_card
+    import models.blogs
+    import models.tools
+    import models.lifebook
+    
+    # 1. Automatic table creation
+    try:
+        print("DEBUG: Creating tables...")
+        Base.metadata.create_all(bind=engine)
+        print("DEBUG: Tables created.")
+    except Exception as e:
+        print(f"ERROR: Table creation failed: {e}")
 
-    # --- EMERGENCY MIGRATION FOR P1 ---
-    # Since we added a column to an existing table without Alembic, we must force it.
+    # 2. Emergency Migrations
     try:
         from sqlalchemy import text
         with engine.begin() as conn:
-            # Check if column exists (Postgres specific simpler way: just try adding and ignore error)
             try:
-                # Attempt to add the column. If it exists, this will fail safely.
-                # Using 'JSON' type which is compatible.
                 conn.execute(text("ALTER TABLE tenants ADD COLUMN connection_preferences JSON DEFAULT '{}'"))
-                logging.getLogger(__name__).info("✅ Successfully added 'connection_preferences' column to tenants.")
-            except Exception as e:
-                # Allow failure if column exists
-                logging.getLogger(__name__).info(f"Skipping migration (column likely exists): {e}")
+                print("DEBUG: Migration: added connection_preferences")
+            except Exception:
+                pass # Already exists
     except Exception as e:
-         logging.getLogger(__name__).error(f"Migration Check Failed: {e}")
-    # ----------------------------------
+        print(f"DEBUG: Migration check failed: {e}")
 
-    # Seed database with fake data if empty
-    # subprocess.run(["python", "scripts/seed_db.py"], check=True)
     yield
-    # Optional: drop tables on shutdown
-    # Base.metadata.drop_all(bind=engine)
+    print("DEBUG: Exiting lifespan...")
 
 
 # Initialize the application with lifespan
@@ -260,6 +250,8 @@ _INCLUDES = [
     ('/plans', 'plans'),
     ('/blogs', 'blogs'),
     ('/recommendations', 'recommendations'),
+    ('', 'connections'),  # Router already has /connections prefix
+    ('', 'lumi_coach'),  # Router already has /lumi/relationship-coach prefix
     ('/lumi', 'lumi'),
     ('/questions', 'question_cards'),
     ('/events', 'events'),
@@ -273,6 +265,10 @@ _INCLUDES = [
     ('/ai-mode', 'ai_modes'),
     ('/upload', 'upload_file'),
     ('/admin/blogs', 'blogs'),
+    ('/relationship-skills', 'relationship_skills'),
+    ('/self-growth', 'self_growth_skills'),
+    ('/social', 'social_skills'),
+    ('/evaluate', 'skill_evaluation'),
     ('/games/multiplayer', 'game_multiplayer'),
     ('/games/value-compass', 'games_value_compass'),
     ('/games/mood-journey', 'games_mood_journey'),
@@ -461,12 +457,3 @@ else:
 async def health():
     """Simple health endpoint used by probes."""
     return {"status": "ok"}
-
-from api.routers import relationship_skills
-app.include_router(relationship_skills.router, prefix="/relationship-skills", tags=["relationship-skills"])
-from api.routers import self_growth_skills
-app.include_router(self_growth_skills.router, prefix="/self-growth", tags=["self-growth"])
-from api.routers import social_skills
-app.include_router(social_skills.router, prefix="/social", tags=["social-growth"])
-from api.routers import skill_evaluation
-app.include_router(skill_evaluation.router, prefix="/evaluate", tags=["evaluation"])

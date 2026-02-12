@@ -9,16 +9,17 @@ services:
     build: .
     container_name: elinity_backend_test
     ports:
-      - "8081:8000"
+      - "8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - DB_HOST=host.docker.internal
       - DB_PORT=5432
-      - DB_NAME=elinity_db
+      - DB_NAME=elinity_new
       - DB_USER=postgres
       - DB_PASSWORD=nani2906
-      - DB_URL=postgresql://postgres:nani2906@host.docker.internal:5432/elinity_db
+      - DB_URL=postgresql://postgres:nani2906@host.docker.internal:5432/elinity_new
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SKIP_HEAVY_IMPORTS=1

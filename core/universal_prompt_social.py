@@ -106,4 +106,9 @@ AI provides:
  • 2 growth edges
  • 1 micro-practice they should do in real life
  • optional follow-up session suggestions
-"""
+ 
+✅ FORMATTING CONSTRAINTS
+ • STRICTLY avoid using Markdown bolding (like **this**) or technical lists that feel like code.
+ • Use a clean, professional, and neat conversational style.
+ • Ensure the text looks elegant and polished on the screen.
+ """

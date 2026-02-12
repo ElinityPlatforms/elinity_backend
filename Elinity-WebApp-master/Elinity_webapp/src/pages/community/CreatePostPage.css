@@ -1,0 +1,153 @@
+.create-post-container {
+    display: flex;
+    justify-content: center;
+    padding: 60px 24px;
+    width: 100%;
+    min-height: calc(100vh - 80px);
+    /* Account for topbar */
+}
+
+.create-post-card-wrapper {
+    width: 100%;
+    max-width: 800px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.create-post-header {
+    margin-bottom: 24px;
+}
+
+.create-post-card {
+    background: rgba(43, 40, 84, 0.4);
+    backdrop-filter: blur(32px);
+    border: 1px solid rgba(162, 89, 230, 0.2);
+    border-radius: 32px;
+    padding: 48px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
+    /* Ensure no flex-box inherits from Card if any */
+    display: block !important;
+}
+
+.create-post-title {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: #fff;
+    letter-spacing: -0.5px;
+}
+
+.create-post-subtitle {
+    font-size: 17px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 40px;
+    line-height: 1.5;
+}
+
+.post-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.post-textarea-wrapper {
+    position: relative;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+}
+
+.post-textarea-wrapper:focus-within {
+    border-color: #a259e6;
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 30px rgba(162, 89, 230, 0.2);
+    transform: scale(1.01);
+}
+
+.post-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 24px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 19px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    display: block;
+}
+
+.post-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+}
+
+.char-count {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.submit-post-btn {
+    background: linear-gradient(135deg, #a259e6 0%, #3a6cf6 100%);
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 20px rgba(162, 89, 230, 0.3);
+}
+
+.submit-post-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 25px rgba(162, 89, 230, 0.4);
+    filter: brightness(1.1);
+}
+
+.submit-post-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.submit-post-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .create-post-container {
+        padding: 40px 16px;
+    }
+
+    .create-post-card {
+        padding: 32px 24px;
+    }
+
+    .create-post-title {
+        font-size: 28px;
+    }
+}

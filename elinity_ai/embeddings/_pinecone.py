@@ -13,14 +13,20 @@ class PineconeClient:
         host = os.getenv("PINECONE_HOST")
 
         if not api_key or not index_name:
-            raise RuntimeError("PINECONE_API_KEY and PINECONE_INDEX_NAME must be set in .env")
+            print("WARNING: PINECONE_API_KEY or PINECONE_INDEX_NAME not found. Pinecone client will be disabled.")
+            self.pc = None
+            return
 
-        # Initialize Pinecone
-        self.pc = Pinecone(api_key=api_key)
+        try:
+            # Initialize Pinecone
+            self.pc = Pinecone(api_key=api_key)
 
-        # Connect to existing index
-        self.index_name = index_name
-        self.index = self.pc.Index(self.index_name, host=host)
+            # Connect to existing index
+            self.index_name = index_name
+            self.index = self.pc.Index(self.index_name, host=host)
+        except Exception as e:
+            print(f"Error initializing Pinecone: {e}")
+            self.pc = None
 
         
             

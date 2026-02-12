@@ -33,3 +33,17 @@ def create_token(
     db.commit()
     db.refresh(token)
     return token
+@router.post('/{notification_id}/read')
+def mark_notification_read(
+    notification_id: str,
+    current_user: Tenant = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    notif = db.query(Notification).filter(
+        Notification.id == notification_id,
+        Notification.tenant == current_user.id
+    ).first()
+    if notif:
+        notif.read = True
+        db.commit()
+    return {"ok": True}

@@ -22,12 +22,20 @@ class SocialPostCreate(BaseModel):
     content: Optional[str] = None
     media_urls: List[str] = []
 
-class SocialPostResponse(SocialPostCreate):
+class UserPostInfo(BaseModel):
+    id: str
+    full_name: str
+    avatar: Optional[str] = None
+
+class SocialPostResponse(BaseModel):
     id: str
     author_id: str
+    content: Optional[str] = None
+    media_urls: List[str] = []
     likes: List[str] = []
     comments: List[Dict[str, Any]] = []
     created_at: datetime
+    user: Optional[UserPostInfo] = None
 
     class Config:
         from_attributes = True

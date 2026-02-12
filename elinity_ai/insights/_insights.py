@@ -26,10 +26,12 @@ class ElinityInsights:
             system_prompt = SYSTEM_PROMPT_MATCH_WORK
 
         formatted_prompt = (
-            f"Generate a deep AI insight for candidate {user_name} (id={user_id}) with match score {score:.2f}. "
-            f"Candidate Interests: {user_interests}. "
+            f"Generate a deep, warm AI insight for {user_name}. "
+            f"Interests: {user_interests}. "
             f"Context Query: {query}. "
-            "Follow the criteria in the system prompt to evaluate this candidate."
+            "IMPORTANT: Do NOT include any IDs, technical scores, or Markdown formatting like **asterisks**. "
+            "Write in a clean, neat, and conversational tone as an insightful relationship expert. "
+            "Focus strictly on their personality and compatibility."
         )
 
         try:

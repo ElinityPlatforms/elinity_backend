@@ -10,18 +10,59 @@ class AzureStorageClient:
     Azure Blob Storage Client with Safe Fallback for Local/Dev.
     """
     def __init__(self) -> None:
-        # FORCE MOCK: User confirmed Azure deletion
-        print("FORCING MOCK STORAGE: Azure Resources Deleted.")
-        self.blob_service_client = None
-        return
+        self.connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+        self.container_name = os.getenv("AZURE_CONTAINER_NAME", "elinity-assets")
+        
+        if self.connection_string:
+            try:
+                self.blob_service_client = BlobServiceClient.from_connection_string(self.connection_string)
+                self.container_client = self.blob_service_client.get_container_client(self.container_name)
+                # Ensure container exists
+                if not self.container_client.exists():
+                    self.container_client.create_container()
+                print(f"Azure Storage Connected: Container '{self.container_name}'")
+            except Exception as e:
+                print(f"Azure Storage Init Failed: {e}")
+                self.blob_service_client = None
+        else:
+            print("Azure Storage Connection String missing. Falling back to Local Storage.")
+            self.blob_service_client = None
 
     def upload_file(self, file_or_bytes, filename: str, tenant_id: str) -> str:
         """
-        Uploads to Azure if configured, else returns a Mock URL.
+        Uploads to Azure if configured, else saves locally in dev.
         """
         if not self.blob_service_client:
-            print(f"MOCK: Uploading {filename} for tenant {tenant_id}")
-            return f"https://mock-storage.local/{tenant_id}/{filename}"
+            print(f"DEBUG: Local storage fallback for {filename}")
+            upload_dir = os.path.join("static", "uploads")
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir, exist_ok=True)
+            
+            # Simple sanitization and unique naming
+            import time
+            timestamp = int(time.time())
+            safe_filename = "".join([c for c in filename if c.isalnum() or c in "._-"]).strip()
+            unique_filename = f"{tenant_id}_{timestamp}_{safe_filename}"
+            filepath = os.path.join(upload_dir, unique_filename)
+
+            try:
+                if isinstance(file_or_bytes, (bytes, bytearray)):
+                    with open(filepath, "wb") as f:
+                        f.write(file_or_bytes)
+                elif isinstance(file_or_bytes, str) and os.path.isfile(file_or_bytes):
+                    import shutil
+                    shutil.copy(file_or_bytes, filepath)
+                else:
+                    # Fallback if unhandled type
+                    return f"https://mock-storage.local/{tenant_id}/{filename}"
+                
+                # Return accessible local URL
+                # Use environment variable or default to localhost:8000
+                backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+                return f"{backend_url}/static/uploads/{unique_filename}"
+            except Exception as e:
+                print(f"Local upload failed: {e}")
+                return f"https://mock-storage.local/{tenant_id}/{filename}"
 
         # Generate blob name (folder structure: tenant_id/filename)
         blob_name = f"{tenant_id}/{filename}"

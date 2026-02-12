@@ -1,0 +1,252 @@
+.practice-page-root {
+    display: flex;
+    height: 100vh;
+    background: var(--bg-dark);
+}
+
+.practice-page-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.practice-page-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    grid-template-rows: auto 1fr;
+    gap: 1.5rem;
+    padding: 2rem;
+    overflow: hidden;
+}
+
+.practice-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.skill-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-info h2 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: #fff;
+}
+
+.skill-info p {
+    margin: 0;
+    color: var(--primary);
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.practice-chat-container {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chat-history {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.message-wrapper {
+    max-width: 80%;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-wrapper.assistant {
+    align-self: flex-start;
+}
+
+.message-wrapper.user {
+    align-self: flex-end;
+}
+
+.message-bubble {
+    padding: 1rem 1.25rem;
+    border-radius: 18px;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.assistant .message-bubble {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border-bottom-left-radius: 4px;
+}
+
+.user .message-bubble {
+    background: var(--primary);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 15px rgba(162, 89, 230, 0.2);
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.user .message-time {
+    align-self: flex-end;
+}
+
+.chat-input-area {
+    padding: 1.5rem 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.chat-input-area input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.8rem 1.2rem;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.send-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: #8b3fd9;
+    transform: scale(1.05);
+}
+
+.send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.practice-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.coaching-card {
+    padding: 1.5rem !important;
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.1rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.coaching-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.coaching-card li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    position: relative;
+    padding-left: 1.2rem;
+}
+
+.coaching-card li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+}
+
+.coaching-card.info p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Typing Animation */
+.typing {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0);
+    }
+
+    40% {
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 1024px) {
+    .practice-page-content {
+        grid-template-columns: 1fr;
+    }
+
+    .practice-sidebar {
+        display: none;
+    }
+}

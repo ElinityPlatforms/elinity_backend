@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import uuid
 from sqlalchemy import Column, String, DateTime, JSON, ForeignKey, Float
+from sqlalchemy.orm import relationship
 from database.session import Base
 
 def gen_uuid():
@@ -17,8 +18,8 @@ class Connection(Base):
     
     # Participants
     # User A is typically the one who received the recommendation first
-    user_a_id = Column(String, ForeignKey("tenants.id"), nullable=False)
-    user_b_id = Column(String, ForeignKey("tenants.id"), nullable=False)
+    user_a_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_b_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
     
     # Metadata
     mode = Column(String, nullable=False) # 'romantic', 'social', 'professional'
@@ -31,7 +32,7 @@ class Connection(Base):
     # 'personal'   -> Moved to Personal Circle (Search disabled if Romantic)
     # 'declined'   -> User A or B declined (Feedback stored)
     # 'archived'   -> User A archived it for later
-    status = Column(String, default="suggested")
+    status = Column(String, default="suggested", index=True)
     
     # Interaction Data
     ai_icebreaker = Column(String, nullable=True) # Generated on match
@@ -41,3 +42,7 @@ class Connection(Base):
     
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+
+    # Relationships
+    user_a = relationship("Tenant", foreign_keys=[user_a_id], backref="connections_as_a")
+    user_b = relationship("Tenant", foreign_keys=[user_b_id], backref="connections_as_b")

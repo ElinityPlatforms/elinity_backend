@@ -1,0 +1,290 @@
+.subscription-root {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg-gradient);
+}
+
+.subscription-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 80px;
+}
+
+.subscription-content {
+    flex: 1;
+    padding: var(--space-3xl);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.subscription-header {
+    text-align: center;
+    margin-bottom: var(--space-4xl);
+}
+
+.subscription-title {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+}
+
+.subscription-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.current-plan-card {
+    position: relative;
+    padding: var(--space-xl);
+    margin-bottom: var(--space-3xl);
+    text-align: center;
+    background: var(--primary-gradient);
+    border: none;
+}
+
+.current-plan-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: var(--space-md);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.current-plan-card h3 {
+    font-size: 24px;
+    color: white;
+    margin: 0 0 var(--space-sm) 0;
+}
+
+.plan-expiry {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+}
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-3xl);
+    margin-bottom: var(--space-4xl);
+}
+
+.plan-card {
+    position: relative;
+    padding: var(--space-3xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    transition: all var(--transition-base);
+}
+
+.plan-card:hover {
+    transform: translateY(-8px);
+}
+
+.plan-card.featured {
+    border: 2px solid var(--primary);
+    background: linear-gradient(135deg, rgba(162, 89, 230, 0.1), rgba(103, 58, 183, 0.05));
+}
+
+.featured-badge {
+    position: absolute;
+    top: -12px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 8px 16px;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.plan-header {
+    text-align: center;
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.plan-name {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 var(--space-lg) 0;
+    text-transform: capitalize;
+}
+
+.plan-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-xs);
+}
+
+.price-amount {
+    font-size: 48px;
+    font-weight: 700;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.price-period {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+.plan-features {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.feature-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--success);
+}
+
+.referral-card {
+    padding: var(--space-3xl);
+}
+
+.referral-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-3xl);
+}
+
+.referral-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+}
+
+.referral-header h3 {
+    font-size: 24px;
+    margin: 0 0 var(--space-xs) 0;
+}
+
+.referral-header p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.referral-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-3xl);
+}
+
+.referral-stat {
+    text-align: center;
+    padding: var(--space-lg);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.referral-code-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.referral-code-section label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.referral-code-display {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.referral-code-display code {
+    flex: 1;
+    padding: 16px 20px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 2px;
+}
+
+.plans-loading,
+.plans-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-4xl);
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .subscription-main {
+        margin-left: 0;
+    }
+
+    .subscription-content {
+        padding: var(--space-xl);
+    }
+
+    .subscription-title {
+        font-size: 36px;
+    }
+
+    .plans-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .referral-stats {
+        grid-template-columns: 1fr;
+    }
+}

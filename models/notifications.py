@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import Column, String, DateTime, ForeignKey, CheckConstraint, Boolean
 import uuid
 from datetime import datetime, timezone
 from database.session import Base
@@ -31,6 +31,8 @@ class Notification(Base):
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     type = Column(String, nullable=False,default='general')
+    notif_metadata = Column(String, nullable=True) # JSON string for additional context
+    read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     
     __table_args__ = (

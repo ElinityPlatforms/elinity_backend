@@ -1,0 +1,135 @@
+.evaluation-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    text-align: center;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(162, 89, 255, 0.2);
+    border-top-color: #a259ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 24px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.evaluation-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 16px 0 32px;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+}
+
+.report-scores {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.score-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.score-label {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.score-bar-bg {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.score-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a259ff, #6a3de8);
+    border-radius: 6px;
+    transition: width 1s ease-out;
+}
+
+.score-value {
+    align-self: flex-end;
+    font-weight: 700;
+    color: #a259ff;
+}
+
+.report-summary h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #a259ff;
+    margin-bottom: 16px;
+}
+
+.report-summary p {
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+}
+
+.report-side-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.insight-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+}
+
+.insight-card ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.insight-card li {
+    padding-left: 20px;
+    position: relative;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.insight-card li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #a259ff;
+    font-weight: bold;
+}
+
+.insight-card.improvement li::before {
+    color: #ff9800;
+}
+
+.evaluation-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 60px;
+}

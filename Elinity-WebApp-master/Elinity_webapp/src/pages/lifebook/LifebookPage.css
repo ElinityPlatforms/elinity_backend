@@ -1,0 +1,208 @@
+.lifebook-root {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg-gradient);
+}
+
+.lifebook-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 80px;
+}
+
+.lifebook-content {
+    flex: 1;
+    padding: var(--space-3xl);
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.lifebook-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4xl);
+    gap: var(--space-lg);
+}
+
+.lifebook-title {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: var(--space-sm);
+}
+
+.lifebook-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-4xl);
+}
+
+.category-card {
+    padding: var(--space-3xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.category-card:hover {
+    transform: translateY(-8px);
+}
+
+.category-icon {
+    font-size: 48px;
+    margin-bottom: var(--space-md);
+}
+
+.category-name {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.category-description {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 0;
+    flex: 1;
+}
+
+.category-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--glass-border);
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--text-tertiary);
+}
+
+.lifebook-empty {
+    text-align: center;
+    padding: var(--space-4xl);
+}
+
+.empty-icon {
+    font-size: 80px;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-xl);
+}
+
+.lifebook-empty h3 {
+    font-size: 28px;
+    margin-bottom: var(--space-md);
+}
+
+.lifebook-empty p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-3xl);
+}
+
+.recent-section {
+    margin-top: var(--space-4xl);
+}
+
+.section-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: var(--space-xl);
+}
+
+.recent-entries {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+.recent-entry-card {
+    padding: var(--space-xl);
+}
+
+.entry-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.entry-icon {
+    font-size: 32px;
+}
+
+.entry-info {
+    flex: 1;
+}
+
+.entry-category {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.entry-date {
+    font-size: 13px;
+    color: var(--text-tertiary);
+}
+
+.entry-preview {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.lifebook-loading {
+    text-align: center;
+    padding: var(--space-4xl);
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .lifebook-main {
+        margin-left: 0;
+    }
+
+    .lifebook-content {
+        padding: var(--space-xl);
+    }
+
+    .lifebook-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .categories-grid,
+    .recent-entries {
+        grid-template-columns: 1fr;
+    }
+}

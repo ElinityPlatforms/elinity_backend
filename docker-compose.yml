@@ -8,17 +8,37 @@ services:
     image: elinity_common:latest
     container_name: elinity_common
     ports:
-      - "8081:8081"   # FastAPI
-      - "7862:7862"   # Voice Onboarding (Gradio)
+      - "8000:8000" # FastAPI
+      - "7862:7862" # Voice Onboarding (Gradio)
     environment:
       - PYTHONPATH=/app
+      - DB_HOST=host.docker.internal
+      - REDIS_HOST=host.docker.internal
+      - DATABASE_URL=postgresql://postgres:nani2906@host.docker.internal:5432/elinity_new
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
-      sh -c "uvicorn main:app --host 0.0.0.0 --port 8081 & python api/routers/voice_onboarding.py"
+      sh -c "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
-      - elinity_common_default
+      - elinity_network
     volumes:
       - ./keys/firebase.json:/app/keys/firebase.json:ro
       - ./:/app
+
+  elinity_frontend:
+    build:
+      context: ./Elinity-WebApp-master/Elinity_webapp
+      dockerfile: Dockerfile
+    container_name: elinity_frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - elinity_network
+    depends_on:
+      - elinity_common
+    volumes:
+      - ./Elinity-WebApp-master/Elinity_webapp:/app
+      - /app/node_modules
 
   celery_worker_elinity:
     container_name: elinity_celery_worker
@@ -29,10 +49,16 @@ services:
       - .env
     image: celery_worker:latest
     command: celery -A core.celery.celery_app worker --loglevel=info
+    environment:
+      - DB_HOST=host.docker.internal
+      - REDIS_HOST=host.docker.internal
+      - DATABASE_URL=postgresql://postgres:nani2906@host.docker.internal:5432/elinity_new
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - elinity_common
     networks:
-      - elinity_common_default
+      - elinity_network
     volumes:
       - ./:/app
 
@@ -45,13 +71,19 @@ services:
       - .env
     image: celery_beat:latest
     command: celery -A core.celery.celery_app beat --loglevel=info
+    environment:
+      - DB_HOST=host.docker.internal
+      - REDIS_HOST=host.docker.internal
+      - DATABASE_URL=postgresql://postgres:nani2906@host.docker.internal:5432/elinity_new
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - elinity_common
     networks:
-      - elinity_common_default
+      - elinity_network
     volumes:
       - ./:/app
 
 networks:
-  elinity_common_default:
+  elinity_network:
     driver: bridge

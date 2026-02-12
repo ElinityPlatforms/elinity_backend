@@ -49,6 +49,18 @@ class GroupMemberCreateSchema(BaseModel):   # For creating
 
 
 # ----------------------------
+# Group Wizard (Bulk Creation)
+# ----------------------------
+class GroupWizardSchema(BaseModel):
+    name: str
+    description: Optional[str] = None
+    member_ids: list[str] = [] # List of tenant IDs to add
+    image_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# ----------------------------
 # Assets
 # ----------------------------
 class AssetSchema(BaseModel):
@@ -58,7 +70,8 @@ class AssetSchema(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 # ----------------------------
@@ -74,7 +87,8 @@ class ChatSchema(BaseModel):   # For responses
     created_at: datetime
     updated_at: Optional[datetime]
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class ChatCreateSchema(BaseModel):   # For creating

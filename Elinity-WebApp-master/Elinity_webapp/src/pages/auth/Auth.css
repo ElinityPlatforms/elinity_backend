@@ -1,0 +1,125 @@
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl);
+    background: var(--bg-gradient);
+}
+
+.auth-content {
+    width: 100%;
+    max-width: 440px;
+    animation: fadeIn 0.5s ease;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--space-3xl);
+}
+
+.auth-logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: var(--space-lg);
+    filter: drop-shadow(0 4px 12px rgba(162, 89, 230, 0.4));
+}
+
+.auth-header h1 {
+    font-size: 32px;
+    margin-bottom: var(--space-sm);
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.auth-header p {
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.auth-card {
+    margin-bottom: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    width: 100%;
+    align-items: center;
+}
+
+.auth-form .input-container {
+    width: 100%;
+}
+
+.auth-form .input-label {
+    text-align: center;
+    width: 100%;
+}
+
+.auth-error {
+    width: 100%;
+    padding: var(--space-md);
+    background: rgba(255, 91, 91, 0.1);
+    border: 1px solid var(--error);
+    border-radius: var(--radius-md);
+    color: var(--error);
+    font-size: 14px;
+    text-align: center;
+}
+
+.auth-divider {
+    position: relative;
+    text-align: center;
+    margin: var(--space-md) 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+.auth-divider::before {
+    left: 0;
+}
+
+.auth-divider::after {
+    right: 0;
+}
+
+.auth-divider span {
+    padding: 0 var(--space-md);
+    color: var(--text-tertiary);
+    font-size: 14px;
+    background: var(--glass-bg);
+}
+
+.auth-footer {
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

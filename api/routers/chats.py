@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from models.chat import Chat, Group, GroupMember
 from database.session import get_db, Session
 from utils.token import get_current_user
-from models.user import Tenant
 from models.user import Tenant, PersonalInfo, ProfilePicture
+from models.connection import Connection
+from sqlalchemy import or_, and_
 from schemas.chat import ChatSchema, ChatCreateSchema
 from services.ai_service import AIService
 import json
@@ -58,6 +59,22 @@ async def send_direct_message(target_id: str, payload: dict, current_user: Tenan
     if not target:
         raise HTTPException(status_code=404, detail="Target user not found")
 
+    # --- CONNECTION CHECK ---
+    # Normal chats only allowed if status is 'matched' or 'personal_circle'
+    connection = db.query(Connection).filter(
+        or_(
+            and_(Connection.user_a_id == current_user.id, Connection.user_b_id == target_id),
+            and_(Connection.user_a_id == target_id, Connection.user_b_id == current_user.id)
+        ),
+        Connection.status.in_(['matched', 'personal_circle', 'personal'])
+    ).first()
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="You must be mutually connected to message this user. Send a connection request first."
+        )
+
     # Create deterministic DM group name
     ids = sorted([current_user.id, target_id])
     group_name = f"dm_{ids[0]}_{ids[1]}"
@@ -94,8 +111,12 @@ def get_inbox(current_user: Tenant = Depends(get_current_user), db: Session = De
     if not group_ids:
         return []
 
-    # 2. Fetch groups
-    groups = db.query(Group).filter(Group.id.in_(group_ids), Group.status == 'active').all()
+    # 2. Fetch groups (exclude game chat groups from main inbox)
+    groups = db.query(Group).filter(
+        Group.id.in_(group_ids), 
+        Group.status == 'active',
+        ~Group.name.like("game_%")
+    ).all()
     
     inbox_items = []
 

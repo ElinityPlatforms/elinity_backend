@@ -68,7 +68,7 @@ class ProfilePicture(Base):
     id = Column(String, primary_key=True, default=gen_uuid)
     tenant = Column(String, ForeignKey("tenants.id"), nullable=False)
     url = Column(String, nullable=False)
-    uploaded_at = Column(DateTime, default=datetime.now(timezone.utc))
+    uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class ProfilePictureCreate(BaseModel):
     url: str

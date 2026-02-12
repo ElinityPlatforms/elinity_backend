@@ -58,40 +58,33 @@ async def start_skill(skill_id: int, session_number: int = 1, current_user: Tena
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    # Find specific session info
     session_info = next((s for s in skill.get("sessions", []) if s.get("session_number") == session_number), None)
-    if not session_info:
-        # Fallback
-        session_title = skill.get("name")
-        session_goal = "Explore this social skill."
-    else:
-        session_title = session_info.get("title")
-        session_goal = session_info.get("goal")
+    session_title = session_info.get("title") if session_info else skill.get("name")
+    session_goal = session_info.get("goal") if session_info else "Explore this social skill."
 
-    # Get User Context for Deep Profiling
     async with async_session() as session:
          user_context = await get_user_context_string(session, current_user.id)
 
-    # Build the system prompt using the social universal prompt template
-    # Prepend User Context
     prompt_content = UNIVERSAL_SOCIAL_PROMPT.replace("{{SKILL_TITLE}}", f"{skill.get('name')} - {session_title}")
-    prompt_content = prompt_content.replace("{{ONE_LINE_DESCRIPTION}}", f"Session Goal: {session_goal}")  # Re-purposing one-liner slot for goal context if needed
+    prompt_content = prompt_content.replace("{{ONE_LINE_DESCRIPTION}}", f"Session Goal: {session_goal}")
     prompt_content = prompt_content.replace("{{EXTENDED_DESCRIPTION}}", skill.get("description", ""))
     prompt_content = prompt_content.replace("{{NOTES}}", skill.get("notes", ""))
     
     full_system_prompt = f"{user_context}\n\n{prompt_content}"
 
     async with async_session() as session:
-        # Log Activity
         await log_user_activity(session, current_user.id, "skill_start", str(skill_id), {"session_number": session_number, "skill_name": skill.get("name"), "type": "social"})
         
-        conv = ConversationSession(skill_id=skill_id, skill_type="social")
+        user_uuid = None
+        try: user_uuid = uuid.UUID(current_user.id)
+        except: pass
+
+        conv = ConversationSession(user_id=user_uuid, skill_id=skill_id, skill_type="social")
         session.add(conv)
         await session.commit()
         await session.refresh(conv)
 
-        ai_message = await ai_service.chat(full_system_prompt)
-
+        ai_message = await ai_service.chat([{"role": "system", "content": full_system_prompt}])
         turn = ConversationTurn(session_id=conv.id, role="assistant", content=ai_message)
         session.add(turn)
         await session.commit()
@@ -100,14 +93,11 @@ async def start_skill(skill_id: int, session_number: int = 1, current_user: Tena
 
 
 @router.post("/{skill_id}/reply", summary="Reply to a social skill session")
-async def reply_skill(skill_id: int, payload: Dict[str, Any]):
+async def reply_skill(skill_id: int, payload: Dict[str, Any], current_user: Tenant = Depends(get_current_user)):
     skills = load_skills()
     skill = _find_skill(skills, skill_id)
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
-
-    if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="Invalid payload")
 
     session_id = payload.get("session_id")
     user_input = payload.get("user_input")
@@ -115,37 +105,53 @@ async def reply_skill(skill_id: int, payload: Dict[str, Any]):
         raise HTTPException(status_code=400, detail="session_id and user_input are required")
 
     async with async_session() as session:
+        user_uuid = None
+        try: user_uuid = uuid.UUID(current_user.id)
+        except: pass
+
+        # Ownership check
+        res = await session.execute(select(ConversationSession).where(ConversationSession.id == session_id, ConversationSession.user_id == user_uuid))
+        if not res.scalar_one_or_none():
+            raise HTTPException(404, "Session not found")
+
         q = select(ConversationTurn).where(ConversationTurn.session_id == session_id).order_by(desc(ConversationTurn.timestamp)).limit(10)
         res = await session.execute(q)
-        turns = list(reversed([r[0] for r in res.fetchall()]))
+        turns = [r[0] for r in res.fetchall()]
+        history = [{"role": t.role, "content": t.content} for t in reversed(turns)]
 
-        system_msg = {"role": "system", "content": UNIVERSAL_SOCIAL_PROMPT.replace("{{SKILL_TITLE}}", skill.get("name", "")).replace("{{ONE_LINE_DESCRIPTION}}", skill.get("one_liner", "")).replace("{{EXTENDED_DESCRIPTION}}", skill.get("description", "")).replace("{{NOTES}}", skill.get("notes", ""))}
-        messages = [system_msg]
-        for t in turns:
-            messages.append({"role": t.role, "content": t.content})
+        system_content = UNIVERSAL_SOCIAL_PROMPT.replace("{{SKILL_TITLE}}", skill.get("name", "")).replace("{{EXTENDED_DESCRIPTION}}", skill.get("description", "")).replace("{{NOTES}}", skill.get("notes", ""))
+        user_context = await get_user_context_string(session, current_user.id)
+        
+        messages = [{"role": "system", "content": f"{user_context}\n\n{system_content}"}]
+        messages.extend(history)
         messages.append({"role": "user", "content": user_input})
 
         ai_response = await ai_service.chat(messages)
 
-        user_turn = ConversationTurn(session_id=session_id, role="user", content=user_input)
-        session.add(user_turn)
-        await session.commit()
-        await session.refresh(user_turn)
-
-        assistant_turn = ConversationTurn(session_id=session_id, role="assistant", content=ai_response)
-        session.add(assistant_turn)
+        db_turns = [
+            ConversationTurn(session_id=session_id, role="user", content=user_input),
+            ConversationTurn(session_id=session_id, role="assistant", content=ai_response)
+        ]
+        session.add_all(db_turns)
         await session.commit()
 
     return {"reply": ai_response}
 
 
-@router.get("/{session_id}/history", summary="Get conversation history for a social session")
-async def get_history(session_id: str):
+@router.get("/{session_id}/history", summary="Get conversation history")
+async def get_history(session_id: str, current_user: Tenant = Depends(get_current_user)):
     async with async_session() as session:
+        user_uuid = None
+        try: user_uuid = uuid.UUID(current_user.id)
+        except: pass
+        
+        # Ownership check
+        res = await session.execute(select(ConversationSession).where(ConversationSession.id == session_id, ConversationSession.user_id == user_uuid))
+        if not res.scalar_one_or_none():
+            raise HTTPException(404, "Session not found")
+
         q = select(ConversationTurn).where(ConversationTurn.session_id == session_id).order_by(ConversationTurn.timestamp.asc())
         res = await session.execute(q)
-        turns = [
-            {"role": t.role, "content": t.content, "timestamp": t.timestamp.isoformat() if t.timestamp is not None else None}
-            for (t,) in res.fetchall()
-        ]
+        turns = [{"role": t.role, "content": t.content, "timestamp": t.timestamp.isoformat() if t.timestamp else None} for (t,) in res.fetchall()]
     return {"history": turns}
+

@@ -18,6 +18,8 @@ data/
 .vscode/
 tests/
 scripts/
+Elinity-WebApp-master/
+static/
 
 # Explicitly include requirements.txt
 !requirements.txt

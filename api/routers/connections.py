@@ -1,15 +1,110 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_
 from database.session import get_db
 from models.user import Tenant
 from models.connection import Connection
+from models.notifications import Notification
 from utils.token import get_current_user
 from datetime import datetime, timezone
 import logging
 
 router = APIRouter(prefix="/connections", tags=["Connections P1"])
 logger = logging.getLogger(__name__)
+
+def create_notification(db: Session, tenant_id: str, title: str, message: str, type: str = 'social', metadata: dict = None):
+    import json
+    notif = Notification(
+        tenant=tenant_id,
+        title=title,
+        message=message,
+        type=type,
+        notif_metadata=json.dumps(metadata) if metadata else None
+    )
+    db.add(notif)
+    return notif
+
+@router.post("/request/{target_id}")
+async def request_connection(
+    target_id: str,
+    mode: str = Body("social", embed=True),
+    current_user: Tenant = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Initial connection request from User A to User B."""
+    # 1. Check if self
+    if target_id == current_user.id:
+        raise HTTPException(400, "Cannot connect with yourself")
+    
+    
+    # 2. Check if target user exists
+    print(f"🔍 CONNECTION REQUEST: current_user={current_user.id}, target_id={target_id}")
+    target_user = db.query(Tenant).filter(Tenant.id == target_id).first()
+    if not target_user:
+        print(f"❌ TARGET USER NOT FOUND: {target_id}")
+        # List all users for debugging
+        all_users = db.query(Tenant).all()
+        print(f"📋 AVAILABLE USERS: {[(str(u.id), u.email) for u in all_users]}")
+        raise HTTPException(404, f"User not found: {target_id}")
+    print(f"✅ TARGET USER FOUND: {target_user.email}")
+
+
+    # 3. Check if connection exists
+    conn = db.query(Connection).filter(
+        or_(
+            and_(Connection.user_a_id == current_user.id, Connection.user_b_id == target_id),
+            and_(Connection.user_a_id == target_id, Connection.user_b_id == current_user.id)
+        )
+    ).first()
+
+    if conn:
+        # If already suggested, move to pending
+        if conn.status == 'suggested':
+            conn.status = 'pending_b'
+            conn.user_a_id = current_user.id
+            conn.user_b_id = target_id
+            db.commit()
+        else:
+            return {"status": "exists", "connection_status": conn.status, "connection_id": conn.id}
+    else:
+        # Create new
+        conn = Connection(
+            user_a_id=current_user.id,
+            user_b_id=target_id,
+            mode=mode,
+            status='pending_b',
+            score=0.5 # Default
+        )
+        db.add(conn)
+        db.commit()
+    
+    
+    # 3. Notify User B - Load personal info if not already loaded
+    try:
+        if not current_user.personal_info:
+            db.refresh(current_user, ['personal_info'])
+        sender_name = f"{current_user.personal_info.first_name if current_user.personal_info else ''}".strip() or "Someone"
+    except Exception as e:
+        logger.warning(f"Could not load sender name: {e}")
+        sender_name = "Someone"
+    
+    create_notification(
+        db, 
+        target_id, 
+        "New Connection Request", 
+        f"{sender_name} wants to connect with you!", 
+        "social",
+        metadata={
+            "connection_id": str(conn.id),
+            "sender_id": str(current_user.id),
+            "sender_name": sender_name,
+            "action": "connection_request"
+        }
+    )
+    db.commit()
+
+    return {"status": "ok", "connection_status": conn.status, "connection_id": conn.id}
+
 
 # --- HELPERS (Adapted from recommendations.py) ---
 def calculate_heuristic_score(user_a, user_b):
@@ -78,11 +173,27 @@ async def get_daily_batch(
     # 3. Generate New Recommendations (Fill the gap)
     needed = daily_limit - len(existing_recs)
     
-    # Get Candidates (exclude self and already connected)
-    existing_ids = [c.user_b_id for c in db.query(Connection).filter(Connection.user_a_id == current_user.id).all()]
-    existing_ids.append(current_user.id)
+    # Get Candidates (exclude self and already connected in either direction)
+    conns = db.query(Connection).filter(
+        or_(Connection.user_a_id == current_user.id, Connection.user_b_id == current_user.id)
+    ).all()
     
-    candidates = db.query(Tenant).filter(Tenant.id.notin_(existing_ids)).limit(50).all()
+    existing_ids = set()
+    for c in conns:
+        existing_ids.add(c.user_a_id)
+        existing_ids.add(c.user_b_id)
+    existing_ids.add(current_user.id)
+
+    
+    candidates = db.query(Tenant).filter(
+        Tenant.id.notin_(existing_ids),
+        ~Tenant.id.like("host_%"),
+        ~Tenant.id.like("player_%"),
+        ~Tenant.id.like("guest_%"),
+        ~Tenant.email.like("host_%"),
+        ~Tenant.email.like("player_%"),
+        ~Tenant.email.like("guest_%")
+    ).limit(50).all()
     
     scored = []
     for cand in candidates:
@@ -124,6 +235,9 @@ async def get_daily_batch(
         
     # Combine old + new
     all_recs = existing_recs + new_connections
+    
+    # Generate insights concurrently if needed (future improvement)
+    # For now, just ensure format_connection is efficient
     return [format_connection(c, db) for c in all_recs]
 
 @router.post("/action/{connection_id}")
@@ -161,38 +275,70 @@ async def handle_connection_action(
             "feedback_text": feedback,
             "timestamp": str(datetime.now())
         }
-        # TODO: Trigger AI Learning from feedback here
         db.commit()
         return {"ok": True, "status": "declined"}
         
     if action == 'accept':
-        # Logic: If I am User A, set to pending_b.
-        # If I am User B (and it was pending_b), set to Match.
-        
-        # Check if reverse connection exists? 
-        # For simplicity in this mono-table model:
-        # If status is 'suggested' and I am A -> 'pending_b'
-        # If status is 'pending_a' and I am B -> 'matched' (Logic depends on who initiated)
-        
-        # Simpler Logic: 
-        # Check if the OTHER person has already 'accepted' (pending_me).
-        # Since we create 'suggested' strictly for User A, User B doesn't see it yet.
-        # When User A accepts, we must notify User B.
-        
-        if conn.status == 'suggested':
+        if conn.status == 'suggested' and conn.user_a_id == current_user.id:
             conn.status = 'pending_b'
-            # TODO: Create a 'suggested' or 'notification' for User B so they see this.
-            # Ideally create a mirror connection record or update notification table.
-            msg = f"You were suggested to {current_user.personal_info.first_name}, and they accepted."
-            # For prototype: Just update status.
-            
+            # Notify User B
+            sender_name = f"{current_user.personal_info.first_name if current_user.personal_info else ''}".strip() or "Someone"
+            create_notification(
+                db, 
+                conn.user_b_id, 
+                "New Connection Request", 
+                f"{sender_name} wants to connect with you!", 
+                "social",
+                metadata={
+                    "connection_id": str(conn.id),
+                    "sender_id": str(current_user.id),
+                    "sender_name": sender_name,
+                    "action": "connection_request"
+                }
+            )
         elif conn.status == 'pending_b' and conn.user_b_id == current_user.id:
-             # Double Opt-In Complete!
-             conn.status = 'matched'
-             conn.ai_icebreaker = "Make a joke about coffee." # Placeholder
-             
+            conn.status = 'matched'
+            conn.ai_icebreaker = f"You are now connected!"
+            
+            # --- CREATE CHAT SESSION ---
+            from models.chat import Group, GroupMember
+            ids = sorted([conn.user_a_id, conn.user_b_id])
+            group_name = f"dm_{ids[0]}_{ids[1]}"
+            
+            group = db.query(Group).filter(Group.name == group_name).first()
+            if not group:
+                group = Group(
+                    name=group_name, 
+                    tenant=conn.user_a_id, 
+                    description=f"Direct messages between {ids[0]} and {ids[1]}", 
+                    type='users_ai',
+                    status='active'
+                )
+                db.add(group)
+                db.flush()
+                # add members
+                gm1 = GroupMember(group=group.id, tenant=conn.user_a_id)
+                gm2 = GroupMember(group=group.id, tenant=conn.user_b_id)
+                db.add_all([gm1, gm2])
+
+            # Notify User A that B accepted
+            sender_name = f"{current_user.personal_info.first_name if current_user.personal_info else ''}".strip() or "Someone"
+            create_notification(
+                db, 
+                conn.user_a_id, 
+                "Connection Accepted", 
+                f"{sender_name} accepted your request! You can now chat.", 
+                "social",
+                metadata={
+                    "connection_id": str(conn.id),
+                    "sender_id": str(current_user.id),
+                    "sender_name": sender_name,
+                    "action": "connection_accepted"
+                }
+            )
         db.commit()
         return {"ok": True, "status": conn.status}
+
 
     raise HTTPException(400, "Invalid action")
 
@@ -222,6 +368,28 @@ async def confirm_relationship(
     db.commit()
     return {"ok": True, "message": "Moved to Personal Circle"}
 
+@router.get("/pending", tags=["Connections P1"])
+async def list_pending_requests(
+    current_user: Tenant = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """List connection requests sent to ME that I haven't accepted yet (status='pending_b')."""
+    conns = db.query(Connection).filter(
+        Connection.user_b_id == current_user.id,
+        Connection.status == 'pending_b'
+    ).all()
+    
+    results = []
+    for c in conns:
+        results.append({
+            "id": c.id,
+            "user_a_id": c.user_a_id,
+            "mode": c.mode,
+            "score": c.score,
+            "timestamp": c.created_at
+        })
+    return results
+
 @router.get("/", tags=["Connections P1"])
 async def list_connections(
     status_filter: str = "personal_circle",
@@ -229,28 +397,35 @@ async def list_connections(
     db: Session = Depends(get_db)
 ):
     """List all connections with a specific status (default: personal_circle)"""
-    conns = db.query(Connection).filter(
+    conns = db.query(Connection).options(
+        joinedload(Connection.user_a).joinedload(Tenant.personal_info),
+        joinedload(Connection.user_b).joinedload(Tenant.personal_info)
+    ).filter(
         or_(Connection.user_a_id == current_user.id, Connection.user_b_id == current_user.id),
         Connection.status == status_filter
     ).all()
     
     results = []
     for c in conns:
-        other_id = c.user_b_id if c.user_a_id == current_user.id else c.user_a_id
-        other_user = db.query(Tenant).filter(Tenant.id == other_id).first()
+        other_user = c.user_b if c.user_a_id == current_user.id else c.user_a
         if other_user:
              # Basic info mapping
              first = other_user.personal_info.first_name if other_user.personal_info else ""
              last = other_user.personal_info.last_name if other_user.personal_info else ""
              name = f"{first} {last}".strip() or "Unknown"
              
+             # Fetch latest profile picture
+             from models.user import ProfilePicture
+             profile_pic = db.query(ProfilePicture).filter(ProfilePicture.tenant == other_user.id).order_by(ProfilePicture.uploaded_at.desc()).first()
+             avatar_url = profile_pic.url if profile_pic else "/default-avatar.png"
+             
              results.append({
                  "id": str(other_user.id),
                  "connection_id": str(c.id),
                  "name": name,
-                 "avatar": other_user.profile_image_url, 
+                 "avatar": avatar_url, 
                  "relation": "Connection", 
-                 "bio": other_user.bio,
+                 "bio": getattr(other_user, 'bio', ""),
                  "mode": c.mode,
                  "status": c.status,
                  "metrics": {
@@ -258,13 +433,16 @@ async def list_connections(
                      "positiveInteractions": 0,
                      "sharedActivities": []
                  }
-                 # History can be fetched separately if needed
              })
+
     return results
 
 def format_connection(conn, db):
-    # Fetch User B profile
-    user_b = db.query(Tenant).filter(Tenant.id == conn.user_b_id).first()
+    # Fetch User B profile efficiently
+    user_b = db.query(Tenant).options(joinedload(Tenant.personal_info)).filter(Tenant.id == conn.user_b_id).first()
+    if not user_b:
+        return None
+        
     first = user_b.personal_info.first_name if user_b.personal_info else ""
     last = user_b.personal_info.last_name if user_b.personal_info else ""
     name = f"{first} {last}".strip() or "Unknown"

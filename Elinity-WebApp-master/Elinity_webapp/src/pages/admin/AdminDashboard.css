@@ -1,0 +1,334 @@
+.admin-content {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.header-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(162, 89, 230, 0.1);
+    border: 1px solid rgba(162, 89, 230, 0.2);
+    border-radius: 999px;
+    color: #b16cea;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.admin-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    letter-spacing: -1px;
+    color: #fff;
+}
+
+.admin-subtitle {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 24px 0;
+}
+
+/* Stats Cards */
+.p-stats {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.stat-trend {
+    font-size: 12px;
+    font-weight: 700;
+    color: #b16cea;
+}
+
+.stat-trend.positive {
+    color: #4CAF50;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
+
+.stat-footer {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+/* AI Report Card (Lumi Observer) */
+.ai-report-card {
+    padding: 24px;
+    border: 1px solid rgba(162, 89, 230, 0.2);
+    background: radial-gradient(circle at top right, rgba(162, 89, 230, 0.05), transparent);
+    display: block !important;
+    /* Force block to prevent child squeezing */
+}
+
+.ai-report-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.ai-avatar {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #a259e6 0%, #ff6ec7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(162, 89, 230, 0.4);
+}
+
+.ai-title-group h3 {
+    font-size: 20px;
+    margin: 0;
+    font-weight: 800;
+    color: #fff;
+}
+
+.live-badge {
+    font-size: 9px;
+    font-weight: 800;
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    display: inline-block;
+}
+
+.ai-current-status {
+    margin: 20px 0;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.vibe-label {
+    color: rgba(255, 255, 255, 0.4);
+    margin-right: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vibe-value {
+    color: #b16cea;
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.ai-summary {
+    font-size: 18px;
+    line-height: 1.6;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.95);
+    margin: 24px 0;
+    border-left: 4px solid #a259e6;
+    padding: 10px 0 10px 24px;
+    display: block;
+    width: 100%;
+}
+
+.ai-recommendation {
+    display: flex;
+    gap: 16px;
+    background: linear-gradient(to right, rgba(162, 89, 230, 0.1), transparent);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(162, 89, 230, 0.1);
+}
+
+.rec-icon {
+    font-size: 24px;
+    color: #b16cea;
+}
+
+.rec-text strong {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.rec-text p {
+    margin: 6px 0 0 0;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+}
+
+.quick-actions-bar {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+/* Performance Section */
+.performance-section {
+    padding: 20px;
+}
+
+.performance-section h3 {
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: #fff;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.6;
+}
+
+.performance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.performance-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.performance-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(162, 89, 230, 0.3);
+    transform: translateX(8px);
+}
+
+.p-item-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.p-item-info {
+    flex: 1;
+}
+
+.p-item-info h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #fff;
+    font-weight: 700;
+}
+
+.p-item-info p {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.journals {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+}
+
+.matches {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196F3;
+}
+
+.articles {
+    background: rgba(156, 39, 176, 0.1);
+    color: #9C27B0;
+}
+
+.tips-card {
+    padding: 20px;
+    margin-top: 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.tips-card h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: #fff;
+}
+
+.tips-card p {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.6;
+}
+
+@media (max-width: 1000px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-content {
+        padding: 16px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-title {
+        font-size: 28px;
+    }
+
+    .quick-actions-bar {
+        flex-direction: column;
+    }
+
+    .ai-report-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
