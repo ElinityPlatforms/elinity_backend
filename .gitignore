@@ -104,3 +104,10 @@ keys/firebase.json
 firebase-config.yaml
 k8s-deploy.yaml
 Elinity-WebApp-master/
+
+# Frontend and UI Builds
+Elinity-WebApp-master/
+game-ui/
+static/game-ui/
+node_modules/
+dist/
