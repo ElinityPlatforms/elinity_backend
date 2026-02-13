@@ -32,6 +32,7 @@ from utils.token import (
     get_current_user
 )
 from fastapi.security import OAuth2PasswordRequestForm
+from utils.phone import normalize_phone
 
 # {
 #   "email": "johndoe@elinity.com",
@@ -46,14 +47,19 @@ router = APIRouter(tags=['Authentication'])
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if not req.email and not req.phone:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email or phone is required")
-    key_filter = []
-    if req.email:
-        key_filter.append(Tenant.email == req.email)
+    # Normalize phone number if provided
     if req.phone:
-        key_filter.append(Tenant.phone == req.phone)
-    exists = db.query(Tenant).filter(*key_filter).first()
+        req.phone = normalize_phone(req.phone)
+        
+    from sqlalchemy import or_
+    exists = db.query(Tenant).filter(
+        or_(
+            Tenant.email == req.email if req.email else False,
+            Tenant.phone == req.phone if req.phone else False
+        )
+    ).first()
     if exists:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already registered")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already registered with this email or phone")
     hashed = get_password_hash(req.password)
     tenant_obj = Tenant(
         email=req.email,
@@ -91,7 +97,8 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)) -> Token:
     if req.email:
         user = db.query(Tenant).filter(Tenant.email == req.email).first()
     elif req.phone:
-        user = db.query(Tenant).filter(Tenant.phone == req.phone).first()
+        normalized_phone = normalize_phone(req.phone)
+        user = db.query(Tenant).filter(Tenant.phone == normalized_phone).first()
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email or phone required")
     if not user or not verify_password(req.password, user.password):
@@ -135,7 +142,8 @@ async def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     if "@" in username:
         user = db.query(Tenant).filter(Tenant.email == username).first()
     else:
-        user = db.query(Tenant).filter(Tenant.phone == username).first()
+        normalized_phone = normalize_phone(username)
+        user = db.query(Tenant).filter(Tenant.phone == normalized_phone).first()
     if not user or not verify_password(password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
     user.last_login = datetime.now(timezone.utc)

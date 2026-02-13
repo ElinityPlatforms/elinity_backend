@@ -354,6 +354,7 @@ allow_origins = cors_env.split(",") if cors_env else ["*"]
 allow_origins.extend([
     "https://elinity-the-story-weaver-docker.azurewebsites.net",
     "https://elinity-game-ui.vercel.app",
+    "https://lively-glacier-08f57f210.1.azurestaticapps.net",
     "http://localhost:5173",
     "http://localhost:4173",
     "http://localhost:3000",

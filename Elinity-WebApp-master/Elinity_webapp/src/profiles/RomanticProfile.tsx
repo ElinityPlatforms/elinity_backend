@@ -75,7 +75,7 @@ export default function RomanticProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Romantic Profile —</div>
             <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: '1.6' }}>
-              {profile.about}
+              {profile.about_romantic}
             </div>
           </div>
         </div>
@@ -84,9 +84,9 @@ export default function RomanticProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Seeking...</div>
             <ul style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', paddingLeft: 18, margin: 0 }}>
-              <li>Looking for deep emotional resonance and shared life values.</li>
-              <li>Interested in building a partnership based on radical honesty and mutual growth.</li>
-              <li>Valuing quality time, meaningful conversations, and shared adventures.</li>
+              {profile.lookingFor.romantic.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -95,10 +95,9 @@ export default function RomanticProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Affinities</div>
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              <span style={tagStyle}>Intimacy</span>
-              <span style={tagStyle}>Romance</span>
-              <span style={tagStyle}>Trust</span>
-              <span style={tagStyle}>Shared Growth</span>
+              {profile.interests.map((tag, idx) => (
+                <span key={idx} style={tagStyle}>{tag}</span>
+              ))}
             </div>
           </div>
         </div>

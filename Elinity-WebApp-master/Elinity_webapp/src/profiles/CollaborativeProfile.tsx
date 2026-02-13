@@ -85,9 +85,9 @@ export default function CollaborativeProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Seeking Collaboration...</div>
             <ul style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', paddingLeft: 18, margin: 0 }}>
-              <li>Looking for partners who value innovation, integrity, and shared vision.</li>
-              <li>Interested in projects that challenge the status quo and create real impact.</li>
-              <li>Seeking to build a network of professionals committed to conscious collaboration.</li>
+              {profile.lookingFor.collaborative.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -96,10 +96,9 @@ export default function CollaborativeProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Expertise</div>
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              <span style={tagStyle}>Strategy</span>
-              <span style={tagStyle}>Vision</span>
-              <span style={tagStyle}>Leadership</span>
-              <span style={tagStyle}>Innovation</span>
+              {profile.expertise.map((tag, idx) => (
+                <span key={idx} style={tagStyle}>{tag}</span>
+              ))}
             </div>
           </div>
         </div>

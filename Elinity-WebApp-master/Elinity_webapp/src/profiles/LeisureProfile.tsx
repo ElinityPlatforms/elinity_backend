@@ -85,9 +85,9 @@ export default function LeisureProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Looking for...</div>
             <ul style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', paddingLeft: 18, margin: 0 }}>
-              <li>Connecting with like-minded individuals who value growth and authenticity.</li>
-              <li>Sharing experiences, stories, and insights on the journey of self-discovery.</li>
-              <li>Building meaningful connections that transcend the superficial.</li>
+              {profile.lookingFor.leisure.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -96,10 +96,9 @@ export default function LeisureProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Passion & Interest</div>
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              <span style={tagStyle}>Awareness</span>
-              <span style={tagStyle}>Growth</span>
-              <span style={tagStyle}>Mindfulness</span>
-              <span style={tagStyle}>Connection</span>
+              {profile.interests.map((tag, idx) => (
+                <span key={idx} style={tagStyle}>{tag}</span>
+              ))}
             </div>
           </div>
         </div>
@@ -110,9 +109,13 @@ export default function LeisureProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>My Core Values</div>
             <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: '1.6' }}>
-              Your core values are the compass that guides your life. By reflecting on what truly matters to you,
-              you enable <strong>Lumi AI</strong> to provide guidance that is deeply aligned with your soul's purpose.<br /><br />
-              Use the <em>Deep Persona Cards</em> and <em>Rituals</em> to explore and define these values.
+              {profile.aspiration || (
+                <>
+                  Your core values are the compass that guides your life. By reflecting on what truly matters to you,
+                  you enable <strong>Lumi AI</strong> to provide guidance that is deeply aligned with your soul's purpose.<br /><br />
+                  Use the <em>Deep Persona Cards</em> and <em>Rituals</em> to explore and define these values.
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -121,10 +124,9 @@ export default function LeisureProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Personality</div>
             <ul style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', paddingLeft: 18, margin: 0 }}>
-              <li>🌟 Seeking Truth</li>
-              <li>🌱 Always Growing</li>
-              <li>🤝 Valuing Depth</li>
-              <li>✨ Embracing Wonder</li>
+              {profile.personality.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -133,10 +135,9 @@ export default function LeisureProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Values</div>
             <ul style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', paddingLeft: 18, margin: 0 }}>
-              <li>🖌️ Authenticity</li>
-              <li>💡 Freedom</li>
-              <li>🧘‍♀️ Presence</li>
-              <li>🤝 Connection</li>
+              {profile.values.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -151,10 +152,14 @@ export default function LeisureProfile() {
           <div style={{ ...cardStyle, height: '100%' }}>
             <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>Recent Reflections</div>
             <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: '1.6' }}>
-              Your recent journey with <strong>Lumi AI</strong> shown here will reflect your deepest insights and growth milestones.<br /><br />
-              As you interact with the platform—journaling, answering persona cards, and completing rituals—this space will transform
-              into a beautiful mosaic of your inner world and life's progress.<br /><br />
-              Currently, your "Radical Awareness" is being cultivated through your active participation.
+              {profile.reflections || (
+                <>
+                  Your recent journey with <strong>Lumi AI</strong> shown here will reflect your deepest insights and growth milestones.<br /><br />
+                  As you interact with the platform—journaling, answering persona cards, and completing rituals—this space will transform
+                  into a beautiful mosaic of your inner world and life's progress.<br /><br />
+                  Currently, your "Radical Awareness" is being cultivated through your active participation.
+                </>
+              )}
             </div>
           </div>
         </div>

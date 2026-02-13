@@ -63,6 +63,7 @@ soundfile>=0.12.1
 pillow>=10.0.0
 azure-storage-blob
 azure-identity
+phonenumbers
 
 # P2 Backend Dependencies
 openai>=1.0.0

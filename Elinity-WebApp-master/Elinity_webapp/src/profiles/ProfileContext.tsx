@@ -13,6 +13,25 @@ export interface ProfileData {
   relationship: string;
   gender: string;
   about: string;
+  about_romantic: string;
+  about_collaborative: string;
+  // Expanded fields
+  interests: string[];
+  expertise: string[];
+  hobbies: string[];
+  values: string[];
+  personality: string[];
+  lookingFor: {
+    leisure: string[];
+    romantic: string[];
+    collaborative: string[];
+  };
+  reflections: string;
+  goals: {
+    personal: string[];
+    professional: string[];
+  };
+  aspiration: string;
 }
 
 const defaultProfile: ProfileData = {
@@ -25,7 +44,37 @@ const defaultProfile: ProfileData = {
   location: "Not specified",
   relationship: "Not specified",
   gender: "Not specified",
-  about: "Welcome to your Elinity profile! Tell us about yourself to help Lumi AI understand you better and provide more personalized guidance. You can edit your bio, upload a profile picture, and share your interests in the Edit Profile section.",
+  about: "Describe your leisure and social self here.",
+  about_romantic: "What are you looking for in a partner?",
+  about_collaborative: "Describe your professional skills and vision.",
+  interests: ["Awareness", "Growth", "Mindfulness", "Connection"],
+  expertise: ["Strategy", "Vision", "Leadership", "Innovation"],
+  hobbies: [],
+  values: ["Authenticity", "Freedom", "Presence", "Connection"],
+  personality: ["Seeking Truth", "Always Growing", "Valuing Depth", "Embracing Wonder"],
+  lookingFor: {
+    leisure: [
+      "Connecting with like-minded individuals who value growth and authenticity.",
+      "Sharing experiences, stories, and insights on the journey of self-discovery.",
+      "Building meaningful connections that transcend the superficial."
+    ],
+    romantic: [
+      "Looking for deep emotional resonance and shared life values.",
+      "Interested in building a partnership based on radical honesty and mutual growth.",
+      "Valuing quality time, meaningful conversations, and shared adventures."
+    ],
+    collaborative: [
+      "Looking for partners who value innovation, integrity, and shared vision.",
+      "Interested in projects that challenge the status quo and create real impact.",
+      "Seeking to build a network of professionals committed to conscious collaboration."
+    ]
+  },
+  reflections: "Your recent journey with Lumi AI shown here will reflect your deepest insights and growth milestones.",
+  goals: {
+    personal: [],
+    professional: []
+  },
+  aspiration: ""
 };
 
 
@@ -68,6 +117,19 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         .filter(Boolean)
         .join(" ") || defaultProfile.displayName;
 
+      // Map dynamic lists
+      const interests = (data.interests_and_hobbies?.interests?.length > 0)
+        ? data.interests_and_hobbies.interests
+        : defaultProfile.interests;
+
+      const expertise = (data.collaboration_preferences?.areas_of_expertise?.length > 0)
+        ? data.collaboration_preferences.areas_of_expertise
+        : defaultProfile.expertise;
+
+      const values = (data.values_beliefs_and_goals?.values?.length > 0)
+        ? data.values_beliefs_and_goals.values
+        : defaultProfile.values;
+
       const mapped: ProfileData = {
         id: data.id || defaultProfile.id,
         profileImg,
@@ -80,8 +142,31 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         gender: pi.gender || defaultProfile.gender,
         about:
           (data.personal_free_form && data.personal_free_form.things_to_share) ||
-          data.values_beliefs_and_goals?.beliefs ||
           defaultProfile.about,
+        about_romantic: data.relationship_preferences?.relationship_goals || defaultProfile.about_romantic,
+        about_collaborative: data.collaboration_preferences?.seeking || defaultProfile.about_collaborative,
+        interests,
+        expertise,
+        hobbies: data.interests_and_hobbies?.hobbies || [],
+        values,
+        personality: (data.psychology?.communication_style) ? [
+          data.psychology.communication_style,
+          data.psychology.conflict_resolution_style,
+          data.psychology.attachment_style
+        ].filter(Boolean) : defaultProfile.personality,
+        lookingFor: {
+          leisure: data.friendship_preferences?.seeking ? [data.friendship_preferences.seeking] : defaultProfile.lookingFor.leisure,
+          romantic: data.relationship_preferences?.seeking ? [data.relationship_preferences.seeking] : defaultProfile.lookingFor.romantic,
+          collaborative: data.collaboration_preferences?.seeking ? [data.collaboration_preferences.seeking] : defaultProfile.lookingFor.collaborative
+        },
+        reflections: data.aspiration_and_reflections?.life_goals?.join(", ") ||
+          data.aspiration_and_reflections?.bucket_list?.join(", ") ||
+          defaultProfile.reflections,
+        goals: {
+          personal: data.values_beliefs_and_goals?.personal_goals || [],
+          professional: data.values_beliefs_and_goals?.professional_goals || []
+        },
+        aspiration: data.values_beliefs_and_goals?.beliefs || defaultProfile.aspiration
       };
       setProfile(mapped);
     } catch (err) {
@@ -109,4 +194,4 @@ export function useProfile() {
   const ctx = useContext(ProfileContext);
   if (!ctx) throw new Error("useProfile must be used within a ProfileProvider");
   return ctx;
-} 
+}
